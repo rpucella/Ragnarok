@@ -14,7 +14,7 @@ idea of putting code in files is really a presentation-layer issue.
 I intend Ragnarok to be my exploration of this idea. It sounds
 grandiose, I know. I fully expect that I'll end replicating the early
 [Smalltalk](https://en.wikipedia.org/wiki/Smalltalk) or [Lisp
-Machine](https://en.wikipedia.org/wiki/Genera_(operating_system)
+Machine](https://en.wikipedia.org/wiki/Genera_(operating_system))
 programming envronments, or more modern attempts at IDEs like
 [LightTable](http://lighttable.com/). So be it. Learn by doing, right?
 
