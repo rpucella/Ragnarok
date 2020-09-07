@@ -27,7 +27,9 @@ the past. Again, so be it.
 
 ## Running the code
 
-The code is currently written in Python 3.7. You'll need that version of Python for things to work out of the box.
+The code is currently written in Python 3.7. You'll need at least that
+version of Python for things to work out of the box. It may well work
+with 3.6, but not anything lower.
 
 1. Install [`pipenv`](https://github.com/pypa/pipenv) - it should be a simple matter of running `pipx install pipenv`, but your OS might have a dedicated package
 
@@ -35,3 +37,11 @@ The code is currently written in Python 3.7. You'll need that version of Python 
 
 3. Run `pipenv run shell` to fire up a simple Ragnarok shell.
 
+If you make modifications, you can run the linter for error messages
+with `pipenv run lint`, and run the unit tests in `tests/` with
+`pipenv run test`.
+
+
+## The language
+
+TODO: add an overview of the language

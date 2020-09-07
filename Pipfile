@@ -5,10 +5,14 @@ verify_ssl = true
 
 [scripts]
 shell = 'python -m src.shell'
+test = 'python -m pytest tests'
+lint = 'python -m pylint --errors-only src tests'
 
 [dev-packages]
+pytest = "*"
+pylint = "*"
 
 [packages]
 
 [requires]
-python_version = "3.7"
+python_version = "3"
