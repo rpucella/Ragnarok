@@ -26,20 +26,11 @@ class LispQuit (Exception):
 
 
 class Environment (object):
-    def __init__ (self, bindings=[], previous=None, root=None):
+    def __init__ (self, bindings=[], previous=None):
         self._previous = previous
         self._bindings = {}
-        if previous:
-            self._root = previous.root()
-        elif root:
-            self._root = root
-        else:
-            raise LispError('Need to specify either previous environment or root object')
         for (name, value) in bindings:
             self.add(name, value)
-
-    def root (self):
-        return self._root
 
     def add (self, symbol, value):
         '''
@@ -79,37 +70,43 @@ class Environment (object):
     def bindings (self):
         return self._bindings.items()
 
+    def names (self):
+        return self._bindings.keys()
+
+    def modules (self):
+        return [n for (n, v) in self._bindings.items() if v.is_module()]
+
     def previous (self):
         return self._previous
 
     
-class RootEnvironment (object):
-    def __init__ (self):
-        self._modules = {}
-
-    def modules (self):
-        return self._modules.keys()
-        
-    def add_module (self, name, bindings=[]):
-        '''
-        Add a new module to the root of the environment
-        '''
-        name = name.upper()
-        if name in self._modules:
-            raise LispError('Module {} already exists'.format(name))
-        env = Environment(root=self, bindings=bindings)
-        self._modules[name] = env
-        return env
-
-        
-    def lookup_module (self, module):
-        '''
-        Look for a module 
-        '''
-        module = module.upper()
-        if module in self._modules:
-            return self._modules[module]
-        raise LispError('Cannot find module {}'.format(module))
+# class RootEnvironment (object):
+#     def __init__ (self):
+#         self._modules = {}
+#
+#     def modules (self):
+#         return self._modules.keys()
+#        
+#     def add_module (self, name, bindings=[]):
+#         '''
+#         Add a new module to the root of the environment
+#         '''
+#         name = name.upper()
+#         if name in self._modules:
+#             raise LispError('Module {} already exists'.format(name))
+#         env = Environment(root=self, bindings=bindings)
+#         self._modules[name] = env
+#         return env
+#
+#        
+#   # def lookup_module (self, module):
+    #     '''
+    #     Look for a module 
+    #     '''
+    #     module = module.upper()
+    #     if module in self._modules:
+    #         return self._modules[module]
+    #     raise LispError('Cannot find module {}'.format(module))
 
 
 class Value (object):
@@ -165,6 +162,10 @@ class Value (object):
     def is_dict (self):
         return self.type() in ['dict']
 
+    # TODO: add unit tests for modules
+    def is_module (self):
+        return self.type() in ['module']
+
     def is_true (self):
         return True
 
@@ -189,7 +190,7 @@ class VBoolean (Value):
         return 'VBoolean({})'.format(self._value)
 
     def __str__ (self):
-        return u'#T' if self._value else u'#F'
+        return '#T' if self._value else '#F'
 
     def type (self):
         return 'boolean'
@@ -212,7 +213,7 @@ class VReference (Value):
         return 'VReference({})'.format(self._value)
 
     def __str__ (self):
-        return u'#<REF {}>'.format(self._value)
+        return '#<REF {}>'.format(self._value)
 
     def type (self):
         return 'ref'
@@ -236,7 +237,7 @@ class VDict (Value):
 
     def __str__ (self):
         entries = ['({})'.format(' '.join([ str(x) for x in v])) for v in self._value]
-        return u'#<DICT {}>'.format(' '.join(entries))
+        return '#<DICT {}>'.format(' '.join(entries))
 
     def type (self):
         return 'dict'
@@ -279,7 +280,7 @@ class VString (Value):
         return 'VString({})'.format(self._value)
 
     def __str__ (self):
-        return u'"{}"'.format(self._value)
+        return '"{}"'.format(self._value)
 
     def type (self):
         return 'string'
@@ -325,7 +326,7 @@ class VNil (Value):
         return 'VNil()'
 
     def __str__ (self):
-        return u'NIL'
+        return 'NIL'
 
     def type (self):
         return 'nil'
@@ -348,10 +349,10 @@ class VEmpty (Value):
         return []
     
     def __str__ (self):
-        return u'()'
+        return '()'
 
     def _str_cdr (self):
-        return u')'
+        return ')'
 
     def type (self):
         return 'empty-list'
@@ -381,10 +382,10 @@ class VCons (Value):
         return 'VCons({},{})'.format(repr(self._car), repr(self._cdr))
 
     def __str__ (self):
-        return u'({}{}'.format(self._car, self._cdr._str_cdr())
+        return '({}{}'.format(self._car, self._cdr._str_cdr())
 
     def _str_cdr (self):
-        return u' {}{}'.format(self._car, self._cdr._str_cdr())
+        return ' {}{}'.format(self._car, self._cdr._str_cdr())
 
     def type (self):
         return 'cons-list'
@@ -414,7 +415,7 @@ class VPrimitive (Value):
 
     def __str__ (self):
         h = id(self)
-        return u'#<PRIMITIVE {}>'.format(hex(h))
+        return '#<PRIMITIVE {}>'.format(hex(h))
 
     def type (self):
         return 'primitive'
@@ -462,7 +463,7 @@ class VFunction (Value):
 
     def __str__ (self):
         h = id(self)
-        return u'#<FUNCTION {}>'.format(hex(h))
+        return '#<FUNCTION {}>'.format(hex(h))
 
     def binding_env (self, values):
         if len(self._params) != len(values):
@@ -484,6 +485,27 @@ class VFunction (Value):
         return (self._params, self._body, self._env)
 
 
+class VModule (Value):
+    def __init__ (self, env):
+        self._env = env
+
+    def __repr__ (self):
+        return 'VModule({})'.format(', '.join(self._env.names()))
+
+    def __str__ (self):
+        return '#<MODULE {}>'.format(' '.join(self._env.names()))
+
+    def type (self):
+        return 'module'
+
+    def env (self):
+        return self._env
+
+    def is_true (self):
+        return True
+
+    
+    
 
 class Expression (object):
 
@@ -526,7 +548,10 @@ class Symbol (Expression):
         if self._qualifiers:
             if len(self._qualifiers) > 1:
                 raise LispError('No support for nested modules yet')
-            v = env.root().lookup_module(self._qualifiers[0]).lookup(self._symbol)
+            v = env.lookup(self._qualifiers[0])
+            if not v.is_module():
+                raise LispError('Symbol {} does not represent a module'.format(self._qualifiers[0]))
+            v = v.env().lookup(self._symbol)
         else:
             v = env.lookup(self._symbol)
         if v is None:
@@ -705,7 +730,7 @@ class SAtom (SExpression):
         return str(self._content)
 
     def _str_cdr (self):
-        return u' . {})'.format(self._content)
+        return ' . {})'.format(self._content)
 
     def match_token (self, tok):
         tok = tok.upper()
@@ -758,10 +783,10 @@ class SCons (SExpression):
         return 'SCons({}, {})'.format(repr(self._car), repr(self._cdr))
 
     def __str__ (self):
-        return u'({}{}'.format(self._car, self._cdr._str_cdr())
+        return '({}{}'.format(self._car, self._cdr._str_cdr())
 
     def _str_cdr (self):
-        return u' {}{}'.format(self._car, self._cdr._str_cdr())
+        return ' {}{}'.format(self._car, self._cdr._str_cdr())
 
     def as_value (self):
         return VCons(self._car.as_value(), self._cdr.as_value())
@@ -778,10 +803,10 @@ class SEmpty (SExpression):
         return None
     
     def __str__ (self):
-        return u'()'
+        return '()'
 
     def _str_cdr (self):
-        return u')'
+        return ')'
 
     def as_value (self):
         return VEmpty()

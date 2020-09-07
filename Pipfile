@@ -9,10 +9,10 @@ test = 'python -m pytest tests'
 lint = 'python -m pylint --errors-only src tests'
 
 [dev-packages]
-pytest = "*"
-pylint = "*"
 
 [packages]
+pytest = "*"
+pylint = "*"
 
 [requires]
 python_version = "3"

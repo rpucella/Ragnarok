@@ -3,13 +3,15 @@ from .lisp import *
 class Engine (object):
     
     def __init__ (self):
-        self._root = RootEnvironment()
-        core = self._root.add_module('core', bindings=PRIMITIVES)
+        root = Environment()
+        core = Environment(bindings=PRIMITIVES, previous=root)
         core.add('empty', VEmpty())
         core.add('nil', VNil())
-        scratch = self._root.add_module('scratch')
-        test = self._root.add_module('test')
+        test = Environment(previous=root)
         test.add('test', VPrimitive('test', test_primitive, 0, 0))
+        root.add('core', VModule(core))
+        root.add('test', VModule(test))
+        self._root = root
         self._parser = Parser()
 
     def read (self, s):
@@ -54,7 +56,7 @@ class Shell:
     def __init__ (self, engine):
         self._engine = engine
         self._module = None   
-        self._env = Environment(root=engine.root())
+        self._env = Environment(previous=engine.root())
         self._env.add('print', VPrimitive('print', self.prim_print, 0, None))
         self._env.add('module', VPrimitive('module', self.prim_module, 0, 1))
         self._env.add('env', VPrimitive('env', self.prim_env, 0, 1))
@@ -82,8 +84,8 @@ class Shell:
             name = args[0].value().upper()
             if name == 'SCRATCH':
                 show_env(self._env)
-            elif name in self._env.root().modules():
-                show_env(self._engine.root().lookup_module(name))
+            elif name in self._env.modules():
+                show_env(self._env.lookup(name).env())
             else:
                 raise LispError('No module {}'.format(name))
         else:
@@ -95,12 +97,12 @@ class Shell:
             name = args[0].value().upper()
             if name == 'SCRATCH':
                 self._module = None
-            elif name in self._env.root().modules():
+            elif name in self._env.modules():
                 self._module = name
             else:
                 raise LispError('No module {}'.format(name))
         else:
-            for name in self._env.root().modules():
+            for name in self._env.modules():
                 self.emit(';; ' + name)
         return VNil()
         
@@ -114,7 +116,7 @@ class Shell:
 
     def current_env (self):
         if self._module:
-            return self._engine.root().lookup_module(self._module)
+            return self._env.lookup(self._module).env()
         else:
             return self._env
 
