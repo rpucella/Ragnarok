@@ -67,14 +67,23 @@ class Environment (object):
             return self._previous.lookup(symbol)
         raise LispError(f'Cannot find binding for {symbol}')
 
-    def bindings (self):
-        return self._bindings.items()
+    def bindings (self, as_dict=False):
+        if self._previous:
+            result = self._previous.bindings(as_dict=True)
+        else:
+            result = {}
+        for n in self._bindings:
+            result[n] = self._bindings[n]
+        if as_dict:
+            return result
+        else:
+            return result.items()
 
     def names (self):
-        return self._bindings.keys()
+        return [n for (n, _) in self.bindings()]
 
     def modules (self):
-        return [n for (n, v) in self._bindings.items() if v.is_module()]
+        return [n for (n, v) in self.bindings() if v.is_module()]
 
     def previous (self):
         return self._previous
@@ -474,7 +483,7 @@ class VFunction (Value):
             new_env.add(x, y)
         return new_env
 
-    def apply (self, values):
+    def applyp (self, values):
         new_env = self.binding_env(values)
         return self._body.eval(new_env)
 

@@ -70,11 +70,7 @@ class Shell:
 
     def prim_env (self, args):
         def show_env (env):
-            all_bindings = []
-            curr = env
-            while curr:
-                all_bindings += curr.bindings()
-                curr = curr.previous()
+            all_bindings = env.bindings()
             width = max(len(b[0]) for b in all_bindings) + 1
             for b in sorted(all_bindings, key=lambda x: x[0]):
                 self.emit(f';; {(b[0] + " " * width)[:width]} {b[1]}')
