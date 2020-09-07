@@ -187,7 +187,7 @@ class Value (object):
         ##self.type() == v.type() and self.value() == v.value()
         return id(self) == id(v)
 
-    def apply (self, args):
+    def apply (self, ctxt, args):
         raise LispError('Cannot apply value {}'.format(self))
 
     
@@ -432,12 +432,12 @@ class VPrimitive (Value):
     def value (self):
         return self._primitive
 
-    def apply (self, values):
+    def apply (self, ctxt, values):
         if len(values) < self._min:
             raise LispWrongArgNoError('Too few arguments {} to primitive {}'.format(len(values), self._name))
         if self._max and len(values) > self._max:
             raise LispWrongArgNoError('Too many arguments {} to primitive {}'.format(len(values), self._name))
-        result = self._primitive(values)
+        result = self._primitive(ctxt, values)
         return (result or VNil())
     
     
@@ -483,10 +483,6 @@ class VFunction (Value):
             new_env.add(x, y)
         return new_env
 
-    def applyp (self, values):
-        new_env = self.binding_env(values)
-        return self._body.eval(new_env)
-
     def type (self):
         return 'function'
 
@@ -518,16 +514,16 @@ class VModule (Value):
 
 class Expression (object):
 
-    def eval_partial (self, env):
+    def eval_partial (self, ctxt, env):
         ''' 
         Partial evaluation.
         Sometimes return an expression to evaluate next along 
         with an environment for evaluation.
         Environment is None when the result is in fact a value.
         '''
-        return (self.eval(env), None)
+        return (self.eval(ctxt, env), None)
 
-    def eval (self, env):
+    def eval (self, ctxt, env):
         '''
         Evaluation with tail-call optimization.
         '''
@@ -535,7 +531,7 @@ class Expression (object):
         curr_env = env
 
         while (True):
-            (new_exp, new_env) = curr_exp.eval_partial(curr_env)
+            (new_exp, new_env) = curr_exp.eval_partial(ctxt, curr_env)
             if new_env is None:
                 # actually a value!
                 return new_exp
@@ -553,7 +549,7 @@ class Symbol (Expression):
             return 'Symbol({}, {})'.format(':'.join(self._qualifiers), self._symbol)
         return 'Symbol({})'.format(self._symbol)
 
-    def eval (self, env):
+    def eval (self, ctxt, env):
         if self._qualifiers:
             if len(self._qualifiers) > 1:
                 raise LispError('No support for nested modules yet')
@@ -575,7 +571,7 @@ class String (Expression):
     def __repr__ (self):
         return 'String({})'.format(self._string)
                            
-    def eval (self, env):
+    def eval (self, ctxt, env):
         return VString(self._string)
                             
     
@@ -586,7 +582,7 @@ class Integer (Expression):
     def __repr__ (self):
         return 'Integer({})'.format(self._value)
                             
-    def eval (self, env):
+    def eval (self, ctxt, env):
         return VInteger(self._value)
 
     
@@ -597,7 +593,7 @@ class Boolean (Expression):
     def __repr__ (self):
         return 'Boolean({})'.format(self._value)
                             
-    def eval (self, env):
+    def eval (self, ctxt, env):
         return VBoolean(self._value)
 
     
@@ -610,11 +606,11 @@ class Apply (Expression):
         return 'Apply({}, [{}])'.format(repr(self._fun),
                                         ', '.join([ repr(arg) for arg in self._args ]))
 
-    def eval_partial (self, env):
-        f = self._fun.eval(env)
-        values = [ arg.eval(env) for arg in self._args ]
+    def eval_partial (self, ctxt, env):
+        f = self._fun.eval(ctxt, env)
+        values = [ arg.eval(ctxt, env) for arg in self._args ]
         if isinstance(f, VPrimitive):
-            return (f.apply(values), None)
+            return (f.apply(ctxt, values), None)
         elif isinstance(f, VFunction):
             (_, body, _) = f.value()
             new_env = f.binding_env(values)
@@ -634,8 +630,8 @@ class If (Expression):
                                        repr(self._then),
                                        repr(self._else))
         
-    def eval_partial (self, env):
-        c = self._cond.eval(env)
+    def eval_partial (self, ctxt, env):
+        c = self._cond.eval(ctxt, env)
         if c.is_true():
             return (self._then, env)
         else:
@@ -649,7 +645,7 @@ class Quote (Expression):
     def __repr__ (self):
         return 'Quote({})'.format(repr(self._sexpr))
 
-    def eval (self, env):
+    def eval (self, ctxt, env):
         return self._sexpr.as_value()
 
 
@@ -661,7 +657,7 @@ class Lambda (Expression):
     def __repr__ (self):
         return 'Lambda({}, {})'.format(self._params, repr(self._expr))
         
-    def eval (self, env):
+    def eval (self, ctxt, env):
         return VFunction(self._params, self._expr, env)
 
     
@@ -673,11 +669,11 @@ class LetRec (Expression):
     def __repr__ (self):
         return 'LetRec({}, {})'.format([ (x, repr(z)) for (x, z) in self._bindings ], repr(self._expr))
 
-    def eval_partial (self, env):
+    def eval_partial (self, ctxt, env):
         new_env = Environment(previous=env)
         for (n, e) in self._bindings:
             new_env.add(n, None)
-        vs = [ e.eval(new_env) for (_, e) in self._bindings ]
+        vs = [ e.eval(ctxt, new_env) for (_, e) in self._bindings ]
         for ((n, _), v) in zip(self._bindings, vs):
             new_env.add(n, v)
         return (self._expr, new_env)
@@ -690,11 +686,11 @@ class Do (Expression):
     def __repr__ (self):
         return 'Do([{}])'.format(', '.join([ repr(arg) for arg in self._exprs ]))
         
-    def eval_partial (self, env):
+    def eval_partial (self, ctxt, env):
         if not self._exprs:
             return (VNil(), None)
         for expr in self._exprs[:-1]:
-            expr.eval(env)
+            expr.eval(ctxt, env)
         return (self._exprs[-1], env)
 
 
@@ -1336,12 +1332,12 @@ def primitive(name, min, max=None):
 
 
 @primitive('type', 1, 1)
-def prim_type (args):
+def prim_type (ctxt, args):
     return VSymbol(args[0].type())
 
 
 @primitive('+', 0)
-def prim_plus (args):
+def prim_plus (ctxt, args):
     v = 0
     for arg in args:
         check_arg_type('+', arg, lambda v:v.is_number())
@@ -1349,7 +1345,7 @@ def prim_plus (args):
     return VInteger(v)
 
 @primitive('*', 0)
-def prim_times (args):
+def prim_times (ctxt, args):
     v = 1
     for arg in args:
         check_arg_type('*', arg, lambda v:v.is_number())
@@ -1357,7 +1353,7 @@ def prim_times (args):
     return VInteger(v)
 
 @primitive('-', 1)
-def prim_minus (args):
+def prim_minus (ctxt, args):
     check_arg_type('-', args[0], lambda v:v.is_number())
     v = args[0].value()
     if args[1:]:
@@ -1374,31 +1370,31 @@ def _num_predicate (arg1, arg2, sym, pred):
     return VBoolean(pred(arg1.value(), arg2.value()))
     
 @primitive('=', 2, 2)
-def prim_numequal (args):
+def prim_numequal (ctxt, args):
     return _num_predicate(args[0], args[1], '=', lambda v1, v2: v1 == v2)
 
 @primitive('<', 2, 2)
-def prim_numless (args):
+def prim_numless (ctxt, args):
     return _num_predicate(args[0], args[1], '<', lambda v1, v2: v1 < v2)
 
 @primitive('<=', 2, 2)
-def prim_numlesseq (args):
+def prim_numlesseq (ctxt, args):
     return _num_predicate(args[0], args[1], '<=', lambda v1, v2: v1 <= v2)
 
 @primitive('>', 2, 2)
-def prim_numgreater (args):
+def prim_numgreater (ctxt, args):
     return _num_predicate(args[0], args[1], '>', lambda v1, v2: v1 > v2)
 
 @primitive('>=', 2, 2)
-def prim_numgreatereq (args):
+def prim_numgreatereq (ctxt, args):
     return _num_predicate(args[0], args[1], '>=', lambda v1, v2: v1 >= v2)
 
 @primitive('not', 1, 1)
-def prim_not (args):
+def prim_not (ctxt, args):
     return VBoolean(not args[0].is_true())
 
 @primitive('string-append', 0)
-def prim_string_append (args):
+def prim_string_append (ctxt, args):
     v = ''
     for arg in args:
         check_arg_type('string-append', arg, lambda v:v.is_string())
@@ -1406,22 +1402,22 @@ def prim_string_append (args):
     return VString(v)
 
 @primitive('string-length', 1, 1)
-def prim_string_length (args):
+def prim_string_length (ctxt, args):
     check_arg_type('string-length', args[0], lambda v:v.is_string())
     return VInteger(len(args[0].value()))
 
 @primitive('string-lower', 1, 1)
-def prim_string_lower (args):
+def prim_string_lower (ctxt, args):
     check_arg_type('string-lower', args[0], lambda v:v.is_string())
     return VString(args[0].value().lower())
 
 @primitive('string-upper', 1, 1)
-def prim_string_upper (args):
+def prim_string_upper (ctxt, args):
     check_arg_type('string-upper', args[0], lambda v:v.is_string())
     return VString(args[0].value().upper())
 
 @primitive('string-substring', 1, 3)
-def prim_string_substring (args):
+def prim_string_substring (ctxt, args):
     check_arg_type('string-substring', args[0], lambda v:v.is_string())
     if len(args) > 2:
         check_arg_type('string-substring', args[2], lambda v:v.is_number())
@@ -1436,20 +1432,20 @@ def prim_string_substring (args):
     return VString(args[0].value()[start:end])
 
 @primitive('apply', 2, 2)
-def prim_apply (args):
+def prim_apply (ctxt, args):
     check_arg_type('apply', args[0], lambda v:v.is_function())
     check_arg_type('apply', args[1], lambda v:v.is_list())
     return args[0].apply(args[1].to_list())
     
 @primitive('cons', 2, 2)
-def prim_cons (args):
+def prim_cons (ctxt, args):
     check_arg_type('cons', args[1], lambda v:v.is_list())
     return VCons(args[0], args[1])
 
 @primitive('append', 0)
-def prim_append (args):
+def prim_append (ctxt, args):
     v = VEmpty()
-    for arg in reversed(args):
+    for arg in reversed(ctxt, args):
         check_arg_type('append', arg, lambda v:v.is_list())
         curr = arg
         temp = []
@@ -1461,7 +1457,7 @@ def prim_append (args):
     return v
 
 @primitive('reverse', 1, 1)
-def prim_reverse (args):
+def prim_reverse (ctxt, args):
     check_arg_type('reverse', args[0], lambda v:v.is_list())
     v = VEmpty()
     curr = args[0]
@@ -1471,24 +1467,24 @@ def prim_reverse (args):
     return v
 
 @primitive('first', 1, 1)
-def prim_first (args):
+def prim_first (ctxt, args):
     check_arg_type('first', args[0], lambda v:v.is_cons())
     return args[0].car()
 
 @primitive('rest', 1, 1)
-def prim_rest (args):
+def prim_rest (ctxt, args):
     check_arg_type('rest', args[0], lambda v:v.is_cons())
     return args[0].cdr()
 
 @primitive('list', 0)
-def prim_list (args):
+def prim_list (ctxt, args):
     v = VEmpty()
-    for arg in reversed(args):
+    for arg in reversed(ctxt, args):
         v = VCons(arg, v)
     return v
 
 @primitive('length', 1, 1)
-def prim_length (args):
+def prim_length (ctxt, args):
     check_arg_type('length', args[0], lambda v:v.is_list())
     count = 0
     curr = args[0]
@@ -1498,7 +1494,7 @@ def prim_length (args):
     return VInteger(count)
 
 @primitive('nth', 2, 2)
-def prim_nth (args):
+def prim_nth (ctxt, args):
     check_arg_type('nth', args[0], lambda v:v.is_list())
     check_arg_type('nth', args[1], lambda v:v.is_number())
     idx = args[1].value()
@@ -1512,7 +1508,7 @@ def prim_nth (args):
     raise LispError('Index out of range of list')
 
 @primitive('map', 2)
-def prim_map (args):
+def prim_map (ctxt, args):
     check_arg_type('map', args[0], lambda v:v.is_function())
     for arg in args[1:]:
         check_arg_type('map', arg, lambda v:v.is_list())
@@ -1528,7 +1524,7 @@ def prim_map (args):
     return v
 
 @primitive('filter', 2, 2)
-def prim_filter (args):
+def prim_filter (ctxt, args):
     check_arg_type('filter', args[0], lambda v:v.is_function())
     check_arg_type('filter', args[1], lambda v:v.is_list())
     temp = []
@@ -1543,7 +1539,7 @@ def prim_filter (args):
     return v
 
 @primitive('foldr', 3, 3)
-def prim_foldr (args):
+def prim_foldr (ctxt, args):
     check_arg_type('foldr', args[0], lambda v:v.is_function())
     check_arg_type('foldr', args[1], lambda v:v.is_list())
     curr = args[1]
@@ -1557,7 +1553,7 @@ def prim_foldr (args):
     return v
 
 @primitive('foldl', 3, 3)
-def prim_foldl (args):
+def prim_foldl (ctxt, args):
     check_arg_type('foldl', args[0], lambda v:v.is_function())
     check_arg_type('foldl', args[2], lambda v:v.is_list())
     curr = args[2]
@@ -1568,76 +1564,76 @@ def prim_foldl (args):
     return v
 
 @primitive('eq?', 2, 2)
-def prim_eqp (args):
+def prim_eqp (ctxt, args):
     return VBoolean(args[0].is_eq(args[1]))
 
 @primitive('eql?', 2, 2)
-def prim_eqlp (args):
+def prim_eqlp (ctxt, args):
     return VBoolean(args[0].is_equal(args[1]))
 
 @primitive('empty?', 1, 1)
-def prim_emptyp (args):
+def prim_emptyp (ctxt, args):
     return VBoolean(args[0].is_empty())
     
 @primitive('cons?', 1, 1)
-def prim_consp (args):
+def prim_consp (ctxt, args):
     return VBoolean(args[0].is_cons())
 
 @primitive('list?', 1, 1)
-def prim_listp (args):
+def prim_listp (ctxt, args):
     return VBoolean(args[0].is_list())
 
 @primitive('number?', 1, 1)
-def prim_numberp (args):
+def prim_numberp (ctxt, args):
     return VBoolean(args[0].is_number())
 
 @primitive('boolean?', 1, 1)
-def prim_booleanp (args):
+def prim_booleanp (ctxt, args):
     return VBoolean(args[0].is_boolean())
 
 @primitive('string?', 1, 1)
-def prim_stringp (args):
+def prim_stringp (ctxt, args):
     return VBoolean(args[0].is_string())
 
 @primitive('symbol?', 1, 1)
-def prim_symbolp (args):
+def prim_symbolp (ctxt, args):
     return VBoolean(args[0].is_symbol())
 
 @primitive('function?', 1, 1)
-def prim_functionp (args):
+def prim_functionp (ctxt, args):
     return VBoolean(args[0].is_function())
 
 @primitive('nil?', 1, 1)
-def prim_nilp (args):
+def prim_nilp (ctxt, args):
     return VBoolean(args[0].is_nil())
 
 
 @primitive('ref?', 1, 1)
-def prim_refp (args):
+def prim_refp (ctxt, args):
     return VBoolean(args[0].is_reference())
 
 @primitive('ref', 1, 1)
-def prim_ref (args):
+def prim_ref (ctxt, args):
     return VReference(args[0])
 
 @primitive('ref-get', 1, 1)
-def prim_ref_get (args):
+def prim_ref_get (ctxt, args):
     check_arg_type('ref-get', args[0], lambda v: v.is_reference())
     return args[0].value()
 
 @primitive('ref-set', 2, 2)
-def prim_ref_set (args):
+def prim_ref_set (ctxt, args):
     check_arg_type('ref-set', args[0], lambda v: v.is_reference())
     args[0].set_value(args[1])
     return VNil()
 
 
 @primitive('dict?', 1, 1)
-def prim_dictp (args):
+def prim_dictp (ctxt, args):
     return VBoolean(args[0].is_dict())
     
 @primitive('make-dict', 1, 1)
-def prim_make_dict (args):
+def prim_make_dict (ctxt, args):
     check_arg_type('make-dict', args[0], lambda v:v.is_list())
     entries = [ tuple(v.to_list()) for v in args[0].to_list() ]
     for entry in entries:
@@ -1646,25 +1642,78 @@ def prim_make_dict (args):
     return VDict(entries)
 
 @primitive('dict-get', 2, 2)
-def prim_dict_get (args):
+def prim_dict_get (ctxt, args):
     check_arg_type('dict-get', args[0], lambda v:v.is_dict())
     check_arg_type('dict-get', args[1], lambda v:v.is_atom())
     return args[0].lookup(args[1])
 
 @primitive('dict-update', 3, 3)
-def prim_dict_update (args):
+def prim_dict_update (ctxt, args):
     check_arg_type('dict-update', args[0], lambda v:v.is_dict())
     check_arg_type('dict-update', args[1], lambda v:v.is_atom())
     return args[0].update(args[1], args[2])
 
 @primitive('dict-set!', 3, 3)
-def prim_dict_set (args):
+def prim_dict_set (ctxt, args):
     check_arg_type('dict-set!', args[0], lambda v:v.is_dict())
     check_arg_type('dict-set!', args[1], lambda v:v.is_atom())
     return args[0].set(args[1], args[2])
 
-def test_primitive (args):
-    print('Hello world!')
+
+@primitive('print', 0)
+def prim_print (self, ctxt, args):
+    result = ' '.join([arg.display() for arg in args])
+    ctxt['print'](result)
+
+
+def prim_test (ctxt, args):
+    ctxt['print']('Hello world!')
     return VNil()
 
+
+
+##############################################################
+# INTERACTIVE
+
+
+def prim_env (ctxt, args):
+    def show_env (env):
+        all_bindings = env.bindings()
+        width = max(len(b[0]) for b in all_bindings) + 1
+        for b in sorted(all_bindings, key=lambda x: x[0]):
+            ctxt['print'](f';; {(b[0] + " " * width)[:width]} {b[1]}')
+
+    env = ctxt['env']
+    if len(args) > 0:
+        check_arg_type('env', args[0], lambda v:v.is_symbol())
+        name = args[0].value().upper()
+        if name == 'SCRATCH':
+            show_env(env)
+        elif name in env.modules():
+            show_env(env.lookup(name).env())
+        else:
+            raise LispError('No module {}'.format(name))
+    else:
+        show_env(env)
+    return VNil()
+
+        
+def prim_module (ctxt, args):
+    if len(args) > 0:
+        check_arg_type('module', args[0], lambda v:v.is_symbol())
+        name = args[0].value().upper()
+        if name == 'SCRATCH':
+            ctxt['set_module'](None)
+        elif name in ctxt['env'].modules():
+            ctxt['set_module'](name)
+        else:
+            raise LispError('No module {}'.format(name))
+    else:
+        for name in ctxt['env'].modules():
+            ctxt['print'](';; ' + name)
+    return VNil()
+        
+
+def prim_quit (ctxt, args):
+    raise LispQuit
 

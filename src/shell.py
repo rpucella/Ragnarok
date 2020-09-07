@@ -8,9 +8,14 @@ class Engine (object):
         core.add('empty', VEmpty())
         core.add('nil', VNil())
         test = Environment(previous=root)
-        test.add('test', VPrimitive('test', test_primitive, 0, 0))
+        test.add('test', VPrimitive('test', prim_test, 0, 0))
+        interactive = Environment(previous=root)
+        interactive.add('quit', VPrimitive('quit', prim_quit, 0, 0))
+        interactive.add('module', VPrimitive('module', prim_module, 0, 1))
+        interactive.add('env', VPrimitive('env', prim_env, 0, 1))
         root.add('core', VModule(core))
         root.add('test', VModule(test))
+        root.add('interactive', VModule(interactive))
         self._root = root
         self._parser = Parser()
 
@@ -22,17 +27,16 @@ class Engine (object):
             return result[0]
         raise LispReadError('Cannot read {}'.format(s))
         
-    def eval (self, module, s):
+    def eval (self, ctxt, s):
         sexp = self.read(s)
-        return self.eval_sexp(module, sexp)
+        return self.eval_sexp(ctxt, sexp)
 
-    def eval_sexp (self, module, sexp):
+    def eval_sexp (self, ctxt, env, sexp):
         (type, result) = self._parser.parse(sexp)
-        env = module
         if type == 'define':
             (name, expr) = result
             name = name.upper()
-            v = expr.eval(env)
+            v = expr.eval(ctxt, env)
             env.add(name, v)
             return { 'result': VNil(), 'report': ';; {}'.format(name)}
         if type == 'defun':
@@ -42,7 +46,7 @@ class Engine (object):
             env.add(name, v)
             return { 'result': VNil(), 'report': ';; {}'.format(name)}
         if type == 'exp':
-            return { 'result': result.eval(env) }
+            return { 'result': result.eval(ctxt, env) }
         raise LispError('Cannot recognize top level type {}'.format(type))
 
     def shell (self):
@@ -57,51 +61,7 @@ class Shell:
         self._engine = engine
         self._module = None   
         self._env = Environment(previous=engine.root())
-        self._env.add('print', VPrimitive('print', self.prim_print, 0, None))
-        self._env.add('module', VPrimitive('module', self.prim_module, 0, 1))
-        self._env.add('env', VPrimitive('env', self.prim_env, 0, 1))
 
-    # TODO: pass a context to every primitive containing,
-    # among others, an emit function, and a module-switching function
-
-    def prim_print (self, args):
-        result = ' '.join([arg.display() for arg in args])
-        self.emit(result)
-
-    def prim_env (self, args):
-        def show_env (env):
-            all_bindings = env.bindings()
-            width = max(len(b[0]) for b in all_bindings) + 1
-            for b in sorted(all_bindings, key=lambda x: x[0]):
-                self.emit(f';; {(b[0] + " " * width)[:width]} {b[1]}')
-            
-        if len(args) > 0:
-            check_arg_type('env', args[0], lambda v:v.is_symbol())
-            name = args[0].value().upper()
-            if name == 'SCRATCH':
-                show_env(self._env)
-            elif name in self._env.modules():
-                show_env(self._env.lookup(name).env())
-            else:
-                raise LispError('No module {}'.format(name))
-        else:
-            show_env(self._env)
-            
-    def prim_module(self, args):
-        if len(args) > 0:
-            check_arg_type('module', args[0], lambda v:v.is_symbol())
-            name = args[0].value().upper()
-            if name == 'SCRATCH':
-                self._module = None
-            elif name in self._env.modules():
-                self._module = name
-            else:
-                raise LispError('No module {}'.format(name))
-        else:
-            for name in self._env.modules():
-                self.emit(';; ' + name)
-        return VNil()
-        
     def prompt (self):
         name = self._module or 'scratch'
         return name.upper() + '> '
@@ -149,13 +109,23 @@ class Shell:
                 state = 'string'
         # this will ignore inputs past the end of the first expression
         return count <= 0
+
+    def context (self):
+        return {
+            'print': self.emit,
+            'env': self._env,
+            'set_module': self.set_module
+        }
+
+    def set_module (self, name):
+        self._module = name
                     
     def process_line (self, full_input):
         try:
             sexp = self._engine.read(full_input)
             if sexp:
                 env = self.current_env()
-                result = self._engine.eval_sexp(env, sexp)
+                result = self._engine.eval_sexp(self.context(), env, sexp)
                 if 'report' in result:
                     self.emit(result['report'])
                 self.emit_result(result['result'])
