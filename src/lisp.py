@@ -55,8 +55,8 @@ class Environment (object):
         if not updated:
             # if the binding doesn't exist, add it locally
             self.add(symbol, value)
-        
-    def lookup (self, symbol):
+
+    def find (self, symbol):
         '''
         Look for a binding up the environment chain.
         '''
@@ -64,7 +64,16 @@ class Environment (object):
         if symbol in self._bindings:
             return self._bindings[symbol]
         if self._previous:
-            return self._previous.lookup(symbol)
+            return self._previous.find(symbol)
+        return None
+            
+    def lookup (self, symbol):
+        '''
+        Look for a binding up the environment chain.
+        '''
+        result = self.find(symbol)
+        if result:
+            return result
         raise LispError(f'Cannot find binding for {symbol}')
 
     def bindings (self, as_dict=False):
@@ -558,8 +567,22 @@ class Symbol (Expression):
                 raise LispError('Symbol {} does not represent a module'.format(self._qualifiers[0]))
             v = v.env().lookup(self._symbol)
         else:
-            v = env.lookup(self._symbol)
+            # unqualified name - look in the default environment + opened modules if any
+            v = env.find(self._symbol)
+            if v is None:
+                if 'modules' in ctxt:
+                    for m in ctxt['modules']:
+                        mv = env.lookup(m)
+                        if mv.is_module():
+                            v = mv.env().find(self._symbol)
+                            if v is not None:
+                                break
+                    else:
+                        raise LispError(f'Cannot find binding for {self._symbol}')
+                else:
+                    raise LispError(f'Cannot find binding for {self._symbol}')
         if v is None:
+            # this can't arise at this point I think...
             raise LispError('Trying to access a non-initialized binding {} in a LETREC'.format(self._symbol))
         return v   #  env.lookup(self._symbol)
 
@@ -1664,56 +1687,3 @@ def prim_dict_set (ctxt, args):
 def prim_print (self, ctxt, args):
     result = ' '.join([arg.display() for arg in args])
     ctxt['print'](result)
-
-
-def prim_test (ctxt, args):
-    ctxt['print']('Hello world!')
-    return VNil()
-
-
-
-##############################################################
-# INTERACTIVE
-
-
-def prim_env (ctxt, args):
-    def show_env (env):
-        all_bindings = env.bindings()
-        width = max(len(b[0]) for b in all_bindings) + 1
-        for b in sorted(all_bindings, key=lambda x: x[0]):
-            ctxt['print'](f';; {(b[0] + " " * width)[:width]} {b[1]}')
-
-    env = ctxt['env']
-    if len(args) > 0:
-        check_arg_type('env', args[0], lambda v:v.is_symbol())
-        name = args[0].value().upper()
-        if name == 'SCRATCH':
-            show_env(env)
-        elif name in env.modules():
-            show_env(env.lookup(name).env())
-        else:
-            raise LispError('No module {}'.format(name))
-    else:
-        show_env(env)
-    return VNil()
-
-        
-def prim_module (ctxt, args):
-    if len(args) > 0:
-        check_arg_type('module', args[0], lambda v:v.is_symbol())
-        name = args[0].value().upper()
-        if name == 'SCRATCH':
-            ctxt['set_module'](None)
-        elif name in ctxt['env'].modules():
-            ctxt['set_module'](name)
-        else:
-            raise LispError('No module {}'.format(name))
-    else:
-        for name in ctxt['env'].modules():
-            ctxt['print'](';; ' + name)
-    return VNil()
-        
-
-def prim_quit (ctxt, args):
-    raise LispQuit
-

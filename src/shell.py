@@ -1,65 +1,13 @@
-from .lisp import *
+import sys
 
-class Engine (object):
-    
-    def __init__ (self):
-        root = Environment()
-        core = Environment(bindings=PRIMITIVES, previous=root)
-        core.add('empty', VEmpty())
-        core.add('nil', VNil())
-        test = Environment(previous=root)
-        test.add('test', VPrimitive('test', prim_test, 0, 0))
-        interactive = Environment(previous=root)
-        interactive.add('quit', VPrimitive('quit', prim_quit, 0, 0))
-        interactive.add('module', VPrimitive('module', prim_module, 0, 1))
-        interactive.add('env', VPrimitive('env', prim_env, 0, 1))
-        root.add('core', VModule(core))
-        root.add('test', VModule(test))
-        root.add('interactive', VModule(interactive))
-        self._root = root
-        self._parser = Parser()
+from .lisp import Environment, LispQuit, LispError
+from .engine import Engine
 
-    def read (self, s):
-        if not s.strip():
-            return None
-        result = parse_sexp(s)
-        if result:
-            return result[0]
-        raise LispReadError('Cannot read {}'.format(s))
-        
-    def eval (self, ctxt, s):
-        sexp = self.read(s)
-        return self.eval_sexp(ctxt, sexp)
-
-    def eval_sexp (self, ctxt, env, sexp):
-        (type, result) = self._parser.parse(sexp)
-        if type == 'define':
-            (name, expr) = result
-            name = name.upper()
-            v = expr.eval(ctxt, env)
-            env.add(name, v)
-            return { 'result': VNil(), 'report': ';; {}'.format(name)}
-        if type == 'defun':
-            (name, params, expr) = result
-            params = [ p.upper() for p in params ]
-            v = VFunction(params, expr, env)
-            env.add(name, v)
-            return { 'result': VNil(), 'report': ';; {}'.format(name)}
-        if type == 'exp':
-            return { 'result': result.eval(ctxt, env) }
-        raise LispError('Cannot recognize top level type {}'.format(type))
-
-    def shell (self):
-        return Shell(self)
-
-    def root (self):
-        return self._root
-
-    
 class Shell:
     def __init__ (self, engine):
         self._engine = engine
-        self._module = None   
+        self._module = None
+        self._open_modules = ['interactive', 'core']
         self._env = Environment(previous=engine.root())
 
     def prompt (self):
@@ -114,7 +62,8 @@ class Shell:
         return {
             'print': self.emit,
             'env': self._env,
-            'set_module': self.set_module
+            'set_module': self.set_module,
+            'modules': self._open_modules
         }
 
     def set_module (self, name):
@@ -169,4 +118,5 @@ class Shell:
         
 
 if __name__ == '__main__':
-    Engine().shell().repl()
+    e = Engine()
+    Shell(e).repl()
