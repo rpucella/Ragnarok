@@ -1,6 +1,6 @@
 import sys
 
-from .lisp import Environment, LispQuit, LispError
+from .lisp import Environment, LispQuit, LispError, LispParseError
 from .engine import Engine
 
 class Shell:
@@ -74,7 +74,7 @@ class Shell:
             sexp = self._engine.read(full_input)
             if sexp:
                 env = self.current_env()
-                result = self._engine.eval_sexp(self.context(), env, sexp)
+                result = self._engine.eval_sexp(self.context(), sexp)
                 if 'report' in result:
                     self.emit(result['report'])
                 self.emit_result(result['result'])

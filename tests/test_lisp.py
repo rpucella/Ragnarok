@@ -4,6 +4,8 @@ from src import lisp
 # FIXME - share testing function between the various pieces that have commonality
 #  e.g., parse_sexp_int <- used to test both parse_sexp() and to test engine.read()
 
+_CONTEXT = {}
+
 def test_environment ():
     
     # basic add + lookup
@@ -11,14 +13,14 @@ def test_environment ():
     e.add('alice', 42)
     assert e.lookup('alice') == 42
     assert e.lookup('ALICE') == 42
-    assert e.bindings() == [('ALICE',42)]
+    assert list(e.bindings()) == [('ALICE',42)]
     assert e.previous() == None
     
     # initial bindings
     e = lisp.Environment(bindings=[('alice', 42), ('bob', 84)])
     assert e.lookup('alice') == 42
     assert e.lookup('bob') == 84
-    assert e.bindings() == [('BOB', 84), ('ALICE',42)]
+    assert list(e.bindings()) == [('ALICE', 42), ('BOB', 84)]
     assert e.previous() == None
     
     # linked environments
@@ -31,21 +33,21 @@ def test_environment ():
     # add overwrites existing
     e = lisp.Environment(bindings=[('alice', 42)])
     e.add('alice', 84)
-    assert e.bindings() == [('ALICE', 84)]
+    assert list(e.bindings()) == [('ALICE', 84)]
     e2 = lisp.Environment(previous=e)
     e2.add('alice', 42)
-    assert e2.bindings() == [('ALICE', 42)]
-    assert e2.previous().bindings() == [('ALICE', 84)]
+    assert list(e2.bindings()) == [('ALICE', 42)]
+    assert list(e2.previous().bindings()) == [('ALICE', 84)]
     
     # updates
     e = lisp.Environment(bindings=[('alice', 42), ('bob', 84)])
     e.update('alice', 168)
-    assert e.bindings() == [('BOB', 84), ('ALICE', 168)]
+    assert list(e.bindings()) == [('ALICE', 168), ('BOB', 84)]
     e = lisp.Environment(bindings=[('alice', 42)])
     e2 = lisp.Environment(bindings=[('bob', 84)], previous=e)
     e2.update('alice', 168)
-    assert e2.bindings() == [('BOB', 84)]
-    assert e2.previous().bindings() == [('ALICE', 168)]
+    assert list(e2.bindings()) == [('ALICE', 168), ('BOB', 84)]
+    assert list(e2.previous().bindings()) == [('ALICE', 168)]
 
 
 #
@@ -438,7 +440,7 @@ def test_value_cons_2 ():
     
 
 def test_value_primitive ():
-    def prim (args):
+    def prim (ctxt, args):
         return (args[0], args[1])
     i = lisp.VInteger(42)
     j = lisp.VInteger(0)
@@ -467,7 +469,7 @@ def test_value_primitive ():
     assert b.is_equal(b)
     assert b.is_eq(b)
     assert b.value() == prim
-    assert b.apply([i, j]) == (i, j)
+    assert b.apply(_CONTEXT, [i, j]) == (i, j)
 
     
 def test_value_symbol ():
@@ -534,7 +536,7 @@ def test_value_function ():
     assert b.is_equal(b)
     assert b.is_eq(b)
     assert b.value() == ([], i, e)
-    result = b.apply([])
+    result = b.apply(_CONTEXT, [])
     assert result.is_number() and result.value() == 42
     
     # 2 arguments
@@ -542,7 +544,7 @@ def test_value_function ():
     e = lisp.Environment()
     b = lisp.VFunction(['x', 'y'], i, e)
     assert b.value() == (['x', 'y'], i, e)
-    result = b.apply([lisp.VInteger(0), lisp.VInteger(0)])
+    result = b.apply(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(0)])
     assert result.is_number() and result.value() == 42
 
     # 2 arguments, one used
@@ -550,7 +552,7 @@ def test_value_function ():
     e = lisp.Environment()
     b = lisp.VFunction(['x', 'y'], i, e)
     assert b.value() == (['x', 'y'], i, e)
-    result = b.apply([lisp.VInteger(42), lisp.VInteger(0)])
+    result = b.apply(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert result.is_number() and result.value() == 42
     
     # 2 arguments, using environment
@@ -558,7 +560,7 @@ def test_value_function ():
     e = lisp.Environment(bindings=[('z', lisp.VInteger(42))])
     b = lisp.VFunction(['x', 'y'], i, e)
     assert b.value() == (['x', 'y'], i, e)
-    result = b.apply([lisp.VInteger(0), lisp.VInteger(0)])
+    result = b.apply(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(0)])
     assert result.is_number() and result.value() == 42
 
 
@@ -645,36 +647,36 @@ def test_sexp_cons ():
     
 def text_sexp_from_value ():
     v = lisp.VBoolean(True)
-    assert SExpression.from_value(v).is_atom()
-    assert SExpression.from_value(v).content() == '#T'
+    assert lisp.SExpression.from_value(v).is_atom()
+    assert lisp.SExpression.from_value(v).content() == '#T'
     v = lisp.VBoolean(False)
-    assert SExpression.from_value(v).is_atom()
-    assert SExpression.from_value(v).content() == '#F'
+    assert lisp.SExpression.from_value(v).is_atom()
+    assert lisp.SExpression.from_value(v).content() == '#F'
     v = lisp.VString('Alice')
-    assert SExpression.from_value(v).is_atom()
-    assert SExpression.from_value(v).content() == '"Alice"'
+    assert lisp.SExpression.from_value(v).is_atom()
+    assert lisp.SExpression.from_value(v).content() == '"Alice"'
     v = lisp.VString(u'Test\u00e9')
-    assert SExpression.from_value(v).is_atom()
-    assert SExpression.from_value(v).content() == u'"Test\u00e9"'
+    assert lisp.SExpression.from_value(v).is_atom()
+    assert lisp.SExpression.from_value(v).content() == u'"Test\u00e9"'
     v = lisp.VInteger(42)
-    assert SExpression.from_value(v).is_atom()
-    assert SExpression.from_value(v).content() == '42'
+    assert lisp.SExpression.from_value(v).is_atom()
+    assert lisp.SExpression.from_value(v).content() == '42'
     v = lisp.VNil()
-    assert SExpression.from_value(v).is_atom()
-    assert SExpression.from_value(v).content() == 'NIL'
+    assert lisp.SExpression.from_value(v).is_atom()
+    assert lisp.SExpression.from_value(v).content() == 'NIL'
     v = lisp.VSymbol('Alice')
-    assert SExpression.from_value(v).is_atom()
-    assert SExpression.from_value(v).content() == 'ALICE'
+    assert lisp.SExpression.from_value(v).is_atom()
+    assert lisp.SExpression.from_value(v).content() == 'ALICE'
     v = lisp.VSymbol('Test\u00e9')
-    assert SExpression.from_value(v).is_atom()
-    assert SExpression.from_value(v).content() == 'TEST\u00c9'
+    assert lisp.SExpression.from_value(v).is_atom()
+    assert lisp.SExpression.from_value(v).content() == 'TEST\u00c9'
     v = lisp.VEmpty()
-    assert SExpression.from_value(v).is_empty()
+    assert lisp.SExpression.from_value(v).is_empty()
     v = lisp.VCons(lisp.VInteger(42), lisp.VEmpty())
-    assert SExpression.from_value(v).is_cons()
-    assert SExpression.from_value(v).car().is_number()
-    assert SExpression.from_value(v).car().value() == 42
-    assert SExpression.from_value(v).cdr().is_empty()
+    assert lisp.SExpression.from_value(v).is_cons()
+    assert lisp.SExpression.from_value(v).content()[0].is_number()
+    assert lisp.SExpression.from_value(v).content()[0].value() == 42
+    assert lisp.SExpression.from_value(v).content()[1].is_empty()
     
     # function? primitive? -- these might be unreadable!?
     
@@ -688,44 +690,44 @@ def text_sexp_from_value ():
 def test_exp_symbol ():
     env = lisp.Environment(bindings=[('Alice', lisp.VInteger(42))])
     e = lisp.Symbol('Alice')
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     e = lisp.Symbol('alice')
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
 
     
 def test_exp_string ():
     env = lisp.Environment()
     e = lisp.String('')
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == ''
     e = lisp.String('Alice')
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == 'Alice'
     # accents
     e = lisp.String(u'Test\u00e9')
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == u'Test\u00e9'
 
     
 def test_exp_integer ():
     env = lisp.Environment()
     e = lisp.Integer(0)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 0
     e = lisp.Integer(42)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
 
 
 def test_exp_boolean ():
     env = lisp.Environment()
     e = lisp.Boolean(True)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == True
     e = lisp.Boolean(False)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == False
 
     
@@ -733,11 +735,11 @@ def test_exp_if ():
     # then branch
     env = lisp.Environment([('a', lisp.VInteger(42))])
     e = lisp.If(lisp.Boolean(True), lisp.Symbol('a'), lisp.Symbol('b'))
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # else branch
     e = lisp.If(lisp.Boolean(False), lisp.Symbol('b'), lisp.Symbol('a'))
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
 
 
@@ -745,16 +747,16 @@ def test_exp_lambda ():
     # simple
     env = lisp.Environment()
     e = lisp.Lambda(['a', 'b'], lisp.Symbol('a'))
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_function()
-    v = v.apply([lisp.VInteger(42), lisp.VInteger(0)])
+    v = v.apply(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert v.is_number() and v.value() == 42
     # environment
     env = lisp.Environment(bindings=[('c', lisp.VInteger(42))])
     e = lisp.Lambda(['a', 'b'], lisp.Symbol('c'))
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_function()
-    v = v.apply([lisp.VInteger(1), lisp.VInteger(0)])
+    v = v.apply(_CONTEXT, [lisp.VInteger(1), lisp.VInteger(0)])
     assert v.is_number() and v.value() == 42
 
     
@@ -764,7 +766,7 @@ def test_exp_apply ():
     f = lisp.VFunction(['x', 'y'], lisp.Symbol('x'), env)
     env = lisp.Environment(bindings=[('f', f), ('a', lisp.VInteger(42)), ('b', lisp.VInteger(0))])
     e = lisp.Apply(lisp.Symbol('f'),[lisp.Symbol('a'), lisp.Symbol('b')])
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     
     # static vs dynamic binding
@@ -772,7 +774,7 @@ def test_exp_apply ():
     f = lisp.VFunction(['x', 'y'], lisp.Symbol('a'), env)
     env = lisp.Environment(bindings=[('f', f), ('a', lisp.VInteger(84)), ('b', lisp.VInteger(0))])
     e = lisp.Apply(lisp.Symbol('f'),[lisp.Symbol('a'), lisp.Symbol('b')])
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     
 
@@ -781,51 +783,51 @@ def test_exp_quote ():
     # symbol
     s = lisp.SAtom('Alice')
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_symbol() and v.value() == 'ALICE'
     # symobl (accents)
     s = lisp.SAtom(u'Test\u00e9')
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_symbol() and v.value() == u'TEST\u00c9'
     # string
     s = lisp.SAtom('"Alice"')
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == 'Alice'
     # string (accents)
     s = lisp.SAtom(u'"Test\u00e9"')
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == u'Test\u00e9'
     # integer
     s = lisp.SAtom('42')
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # boolean
     s = lisp.SAtom('#t')
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == True
     s = lisp.SAtom('#f')
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == False
     # empty
     s = lisp.SEmpty()
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_empty()
     # cons
     s = lisp.SCons(lisp.SAtom('42'), lisp.SEmpty())
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_cons() and v.car().is_number() and v.car().value() == 42 and v.cdr().is_empty()
     # cons 2
     s = lisp.SCons(lisp.SAtom('42'), lisp.SCons(lisp.SAtom('Alice'), lisp.SEmpty()))
     e = lisp.Quote(s)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_cons()
     assert v.car().is_number()
     assert v.car().value() == 42
@@ -842,11 +844,11 @@ def test_exp_do ():
     env = lisp.Environment(bindings=[('a', lisp.VInteger(42))])
     # empty
     e = lisp.Do([])
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_nil()
     # single
     e = lisp.Do([lisp.Symbol('a')])
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     # many 
@@ -854,13 +856,13 @@ def test_exp_do ():
         def __init__ (self, newN):
             self.value = 0
             self.newN = newN
-        def eval (self, env):
+        def eval (self, ctxt, env):
             self.value = self.newN
             return env.lookup('a')
     fe1 = FakeExp(42)
     fe2 = FakeExp(84)
     e = lisp.Do([fe1, fe2, lisp.Symbol('a')])
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     assert fe1.value == 42
@@ -871,25 +873,25 @@ def test_exp_letrec ():
     env = lisp.Environment(bindings=[('a', lisp.VInteger(42))])
     # empty
     e = lisp.LetRec([], lisp.Symbol('a'))
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     # many / one -> two
     e = lisp.LetRec([('one', lisp.Lambda(['x', 'y'], lisp.Symbol('two'))),
                      ('two', lisp.Lambda(['x'], lisp.Symbol('a')))],
                     lisp.Apply(lisp.Symbol('one'), [lisp.Integer(0), lisp.Integer(0)]))                    
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_function()
-    v = v.apply([lisp.VInteger(0)])
+    v = v.apply(_CONTEXT, [lisp.VInteger(0)])
     assert v.is_number()
     assert v.value() == 42
     # many / two -> one
     e = lisp.LetRec([('one', lisp.Lambda(['x'], lisp.Symbol('a'))),
                      ('two', lisp.Lambda(['x', 'y'], lisp.Symbol('one')))],
                     lisp.Apply(lisp.Symbol('two'), [lisp.Integer(0), lisp.Integer(0)]))                    
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_function()
-    v = v.apply([lisp.VInteger(0)])
+    v = v.apply(_CONTEXT, [lisp.VInteger(0)])
     assert v.is_number()
     assert v.value() == 42
 
@@ -898,22 +900,22 @@ def test_sexp_to_exp ():
     env = lisp.Environment(bindings=[('a', lisp.VInteger(42))])
     # symbol
     s = lisp.SAtom('a')
-    v = s.to_expression().eval(env)
+    v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # string
     s = lisp.SAtom('"Alice"')
-    v = s.to_expression().eval(env)
+    v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_string() and v.value() == 'Alice'
     # integer
     s = lisp.SAtom('42')
-    v = s.to_expression().eval(env)
+    v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # boolean
     s = lisp.SAtom('#t')
-    v = s.to_expression().eval(env)
+    v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == True
     s = lisp.SAtom('#f')
-    v = s.to_expression().eval(env)
+    v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == False
     
 
@@ -1082,13 +1084,13 @@ def test_exp_parse_symbol ():
     env = lisp.Environment(bindings=[('Alice', lisp.VInteger(42))])
     inp = _make_sexp('Alice')
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # accents
     env = lisp.Environment(bindings=[(u'Test\u00e9', lisp.VInteger(42))])
     inp = _make_sexp(u'Test\u00e9')
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     
 
@@ -1096,12 +1098,12 @@ def test_exp_parse_string ():
     env = lisp.Environment()
     inp = _make_sexp('"Alice"')
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == 'Alice'
     # accents
     inp = _make_sexp(u'"Test\u00e9"')
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == u'Test\u00e9'
 
     
@@ -1109,7 +1111,7 @@ def test_exp_parse_integer ():
     env = lisp.Environment()
     inp = _make_sexp('42')
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
 
 
@@ -1117,11 +1119,11 @@ def test_exp_parse_boolean ():
     env = lisp.Environment()
     inp = _make_sexp('#t')
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == True
     inp = _make_sexp('#f')
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == False
 
     
@@ -1130,12 +1132,12 @@ def test_exp_parse_if ():
     env = lisp.Environment([('a', lisp.VInteger(42))])
     inp = _make_sexp(['if', '#t', 'a', '#f'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # else branch
     inp = _make_sexp(['if', '#f', '#f', 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
 
 
@@ -1144,9 +1146,9 @@ def test_exp_parse_lambda ():
     env = lisp.Environment()
     inp = _make_sexp(['fun', ['a', 'b'], 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_function()
-    v = v.apply([lisp.VInteger(42), lisp.VInteger(0)])
+    v = v.apply(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert v.is_number() and v.value() == 42
 
     
@@ -1156,7 +1158,7 @@ def test_exp_parse_apply ():
     env = lisp.Environment(bindings=[('f', f), ('a', lisp.VInteger(42)), ('b', lisp.VInteger(0))])
     inp = _make_sexp(['f', 'a', 'b'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     
 
@@ -1165,17 +1167,17 @@ def test_exp_parse_quote ():
     # symbol
     inp = _make_sexp(['quote', 'Alice'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_symbol() and v.value() == 'ALICE'
     # empty
     inp = _make_sexp(['quote', []])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_empty()
     # cons
     inp = _make_sexp(['quote', ['42']])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_cons() and v.car().is_number() and v.car().value() == 42 and v.cdr().is_empty()
 
 
@@ -1184,18 +1186,18 @@ def test_exp_parse_do ():
     # empty
     inp = _make_sexp(['do'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_nil()
     # single
     inp = _make_sexp(['do', 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     # many
     inp = _make_sexp(['do', '0', '1', 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
 
@@ -1205,7 +1207,7 @@ def test_exp_parse_letrec ():
     # empty
     inp = _make_sexp(['letrec', [], 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     # many
@@ -1213,9 +1215,9 @@ def test_exp_parse_letrec ():
                                  ['two', ['fun', ['x'], 'a']]],
                       ['one', '0', '0']])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_function()
-    v = v.apply([lisp.VInteger(0)])
+    v = v.apply(_CONTEXT, [lisp.VInteger(0)])
     assert v.is_number()
     assert v.value() == 42
 
@@ -1225,18 +1227,18 @@ def test_exp_parse_let ():
     # empty
     inp = _make_sexp(['let', [], 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     # many
     inp = _make_sexp(['let', [['a', '84'], ['b', 'a']], 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 84
     inp = _make_sexp(['let', [['a', '84'], ['b', 'a']], 'b'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
 
@@ -1246,18 +1248,18 @@ def test_exp_parse_letstar ():
     # empty
     inp = _make_sexp(['let*', [], 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     # many
     inp = _make_sexp(['let*', [['a', '84'], ['b', 'a']], 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 84
     inp = _make_sexp(['let*', [['a', '84'], ['b', 'a']], 'b'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 84
 
@@ -1267,33 +1269,33 @@ def test_exp_parse_and ():
     # empty
     inp = _make_sexp(['and'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean()
     assert v.value() == True
     # many
     inp = _make_sexp(['and', 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     inp = _make_sexp(['and', '1', 'a' ])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     inp = _make_sexp(['and', '1', '2', 'a' ])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     inp = _make_sexp(['and', '0', '2', 'a' ])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 0
     inp = _make_sexp(['and', '1', '#f', 'a' ])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean()
     assert v.value() == False
 
@@ -1303,33 +1305,33 @@ def test_exp_parse_or ():
     # empty
     inp = _make_sexp(['or'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_boolean()
     assert v.value() == False
     # many
     inp = _make_sexp(['or', 'a'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     inp = _make_sexp(['or', '1', 'a' ])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 1
     inp = _make_sexp(['or', '0', '2', 'a' ])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 2
     inp = _make_sexp(['or', '0', '0', 'a' ])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     inp = _make_sexp(['or', '0', '#f', '0' ])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 0
 
@@ -1342,7 +1344,7 @@ def test_exp_parse_loop ():
                       ['if', ['=', 'n', '0'], 'sum',
                        ['s', ['+', 'n', '-1'], ['+', 'sum', 'n']]]])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 903
 
@@ -1355,7 +1357,7 @@ def test_exp_parse_funrec ():
                        ['if', ['=', 'n', '0'], 'sum',
                         ['s', ['+', 'n', '-1'], ['+', 'sum', 'n']]]], 'a', '0'])
     e = lisp.Parser().parse_exp(inp)
-    v = e.eval(env)
+    v = e.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 903
     
@@ -1371,7 +1373,7 @@ def test_parse_define ():
     p = lisp.Parser().parse_define(inp)
     assert type(p) == type((1, 2))
     assert p[0] == 'A'
-    v = p[1].eval(env)
+    v = p[1].eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
 
@@ -1382,7 +1384,7 @@ def test_parse_defun ():
     assert type(p) == type((1, 2))
     assert p[0] == 'FOO'
     assert p[1] == ['A', 'B']
-    v = p[2].eval(env)
+    v = p[2].eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
 
 
@@ -1395,7 +1397,7 @@ def test_parse_decl_define ():
     p = r[1]
     assert type(p) == type((1, 2))
     assert p[0] == 'A'
-    v = p[1].eval(env)
+    v = p[1].eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     
@@ -1410,7 +1412,7 @@ def test_parse_decl_defun ():
     assert type(p) == type((1, 2))
     assert p[0] == 'FOO'
     assert p[1] == ['A', 'B']
-    v = p[2].eval(env)
+    v = p[2].eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
 
 
@@ -1422,7 +1424,7 @@ def test_parse_decl_exp ():
     assert type(r) == type((1, 2))
     assert r[0] == 'exp'
     p = r[1]
-    v = p.eval(env)
+    v = p.eval(_CONTEXT, env)
     assert v.is_number()
     assert v.value() == 42
     # lambda
@@ -1431,9 +1433,9 @@ def test_parse_decl_exp ():
     assert type(r) == type((1, 2))
     assert r[0] == 'exp'
     p = r[1]
-    v = p.eval(env)
+    v = p.eval(_CONTEXT, env)
     assert v.is_function()
-    v = v.apply([lisp.VInteger(42), lisp.VInteger(0)])
+    v = v.apply(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert v.is_number() and v.value() == 42
     
 
@@ -1442,193 +1444,193 @@ def test_parse_decl_exp ():
 #
 
 def test_prim_type ():
-    v = lisp.prim_type([lisp.VBoolean(True)])
+    v = lisp.prim_type(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_symbol() and v.value() == 'BOOLEAN'
-    v = lisp.prim_type([lisp.VString('Alice')])
+    v = lisp.prim_type(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_symbol() and v.value() == 'STRING'
-    v = lisp.prim_type([lisp.VInteger(42)])
+    v = lisp.prim_type(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_symbol() and v.value() == 'NUMBER'
-    v = lisp.prim_type([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_type(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_symbol() and v.value() == 'REF'
-    v = lisp.prim_type([lisp.VNil()])
+    v = lisp.prim_type(_CONTEXT, [lisp.VNil()])
     assert v.is_symbol() and v.value() == 'NIL'
-    v = lisp.prim_type([lisp.VEmpty()])
+    v = lisp.prim_type(_CONTEXT, [lisp.VEmpty()])
     assert v.is_symbol() and v.value() == 'EMPTY-LIST'
-    v = lisp.prim_type([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_type(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_symbol() and v.value() == 'CONS-LIST'
-    def prim (args):
+    def prim (ctxt, args):
         return (args[0], args[1])
-    v = lisp.prim_type([lisp.VPrimitive('prim', prim, 2)])
+    v = lisp.prim_type(_CONTEXT, [lisp.VPrimitive('prim', prim, 2)])
     assert v.is_symbol() and v.value() == 'PRIMITIVE'
-    v = lisp.prim_type([lisp.VSymbol('Alice')])
+    v = lisp.prim_type(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_symbol() and v.value() == 'SYMBOL'
-    v = lisp.prim_type([lisp.VFunction(['a', 'b'], lisp.Symbol('a'), lisp.Environment())])
+    v = lisp.prim_type(_CONTEXT, [lisp.VFunction(['a', 'b'], lisp.Symbol('a'), lisp.Environment())])
     assert v.is_symbol() and v.value() == 'FUNCTION'
     
 
 def test_prim_plus ():
-    v = lisp.prim_plus([])
+    v = lisp.prim_plus(_CONTEXT, [])
     assert v.is_number() and v.value() == 0
-    v = lisp.prim_plus([lisp.VInteger(42)])
+    v = lisp.prim_plus(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_number() and v.value() == 42
-    v = lisp.prim_plus([lisp.VInteger(42), lisp.VInteger(84)])
+    v = lisp.prim_plus(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(84)])
     assert v.is_number() and v.value() == 42 + 84
-    v = lisp.prim_plus([lisp.VInteger(42), lisp.VInteger(84), lisp.VInteger(168)])
+    v = lisp.prim_plus(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(84), lisp.VInteger(168)])
     assert v.is_number() and v.value() == 42 + 84 + 168
 
     
 def test_prim_times ():
-    v = lisp.prim_times([])
+    v = lisp.prim_times(_CONTEXT, [])
     assert v.is_number() and v.value() == 1
-    v = lisp.prim_times([lisp.VInteger(42)])
+    v = lisp.prim_times(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_number() and v.value() == 42
-    v = lisp.prim_times([lisp.VInteger(42), lisp.VInteger(84)])
+    v = lisp.prim_times(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(84)])
     assert v.is_number() and v.value() == 42 * 84
-    v = lisp.prim_times([lisp.VInteger(42), lisp.VInteger(84), lisp.VInteger(168)])
+    v = lisp.prim_times(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(84), lisp.VInteger(168)])
     assert v.is_number() and v.value() == 42 * 84 * 168
 
     
 def test_prim_minus ():
-    v = lisp.prim_minus([lisp.VInteger(42)])
+    v = lisp.prim_minus(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_number() and v.value() == -42
-    v = lisp.prim_minus([lisp.VInteger(42), lisp.VInteger(84)])
+    v = lisp.prim_minus(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(84)])
     assert v.is_number() and v.value() == 42 - 84
-    v = lisp.prim_minus([lisp.VInteger(42), lisp.VInteger(84), lisp.VInteger(168)])
+    v = lisp.prim_minus(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(84), lisp.VInteger(168)])
     assert v.is_number() and v.value() == 42 - 84 - 168
 
 
 def test_prim_numequal ():
-    v = lisp.prim_numequal([lisp.VInteger(0), lisp.VInteger(42)])
+    v = lisp.prim_numequal(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numequal([lisp.VInteger(42), lisp.VInteger(0)])
+    v = lisp.prim_numequal(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numequal([lisp.VInteger(0), lisp.VInteger(0)])
+    v = lisp.prim_numequal(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_numequal([lisp.VInteger(42), lisp.VInteger(42)])
+    v = lisp.prim_numequal(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == True
     
 
 def test_prim_numless ():
-    v = lisp.prim_numless([lisp.VInteger(0), lisp.VInteger(42)])
+    v = lisp.prim_numless(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_numless([lisp.VInteger(42), lisp.VInteger(0)])
+    v = lisp.prim_numless(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numless([lisp.VInteger(0), lisp.VInteger(0)])
+    v = lisp.prim_numless(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numless([lisp.VInteger(42), lisp.VInteger(42)])
+    v = lisp.prim_numless(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
     
 
 def test_prim_numlesseq ():
-    v = lisp.prim_numlesseq([lisp.VInteger(0), lisp.VInteger(42)])
+    v = lisp.prim_numlesseq(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_numlesseq([lisp.VInteger(42), lisp.VInteger(0)])
+    v = lisp.prim_numlesseq(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numlesseq([lisp.VInteger(0), lisp.VInteger(0)])
+    v = lisp.prim_numlesseq(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_numlesseq([lisp.VInteger(42), lisp.VInteger(42)])
+    v = lisp.prim_numlesseq(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == True
     
 
 def test_prim_numgreater ():
-    v = lisp.prim_numgreater([lisp.VInteger(0), lisp.VInteger(42)])
+    v = lisp.prim_numgreater(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numgreater([lisp.VInteger(42), lisp.VInteger(0)])
+    v = lisp.prim_numgreater(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_numgreater([lisp.VInteger(0), lisp.VInteger(0)])
+    v = lisp.prim_numgreater(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numgreater([lisp.VInteger(42), lisp.VInteger(42)])
+    v = lisp.prim_numgreater(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
     
 
 def test_prim_numgreatereq ():
-    v = lisp.prim_numgreatereq([lisp.VInteger(0), lisp.VInteger(42)])
+    v = lisp.prim_numgreatereq(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numgreatereq([lisp.VInteger(42), lisp.VInteger(0)])
+    v = lisp.prim_numgreatereq(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_numgreatereq([lisp.VInteger(0), lisp.VInteger(0)])
+    v = lisp.prim_numgreatereq(_CONTEXT, [lisp.VInteger(0), lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_numgreatereq([lisp.VInteger(42), lisp.VInteger(42)])
+    v = lisp.prim_numgreatereq(_CONTEXT, [lisp.VInteger(42), lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == True
 
 
 def test_prim_not ():
-    v = lisp.prim_not([lisp.VBoolean(True)])
+    v = lisp.prim_not(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_not([lisp.VBoolean(False)])
+    v = lisp.prim_not(_CONTEXT, [lisp.VBoolean(False)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_not([lisp.VInteger(0)])
+    v = lisp.prim_not(_CONTEXT, [lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_not([lisp.VInteger(42)])
+    v = lisp.prim_not(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_not([lisp.VString('')])
+    v = lisp.prim_not(_CONTEXT, [lisp.VString('')])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_not([lisp.VString('Alice')])
+    v = lisp.prim_not(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_not([lisp.VEmpty()])
+    v = lisp.prim_not(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_not([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_not(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
 
 
 def test_prim_string_append ():
-    v = lisp.prim_string_append([])
+    v = lisp.prim_string_append(_CONTEXT, [])
     assert v.is_string() and v.value() == ''
-    v = lisp.prim_string_append([lisp.VString('Alice')])
+    v = lisp.prim_string_append(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_string() and v.value() == 'Alice'
-    v = lisp.prim_string_append([lisp.VString('Alice'), lisp.VString('Bob')])
+    v = lisp.prim_string_append(_CONTEXT, [lisp.VString('Alice'), lisp.VString('Bob')])
     assert v.is_string() and v.value() == 'AliceBob'
-    v = lisp.prim_string_append([lisp.VString('Alice'), lisp.VString('Bob'), lisp.VString('Charlie')])
+    v = lisp.prim_string_append(_CONTEXT, [lisp.VString('Alice'), lisp.VString('Bob'), lisp.VString('Charlie')])
     assert v.is_string() and v.value() == 'AliceBobCharlie'
     
 
 def test_prim_string_length ():
-    v = lisp.prim_string_length([lisp.VString('')])
+    v = lisp.prim_string_length(_CONTEXT, [lisp.VString('')])
     assert v.is_number() and v.value() == 0
-    v = lisp.prim_string_length([lisp.VString('Alice')])
+    v = lisp.prim_string_length(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_number() and v.value() == 5
-    v = lisp.prim_string_length([lisp.VString('Alice Bob')])
+    v = lisp.prim_string_length(_CONTEXT, [lisp.VString('Alice Bob')])
     assert v.is_number() and v.value() == 9
 
     
 def test_prim_string_lower ():
-    v = lisp.prim_string_lower([lisp.VString('')])
+    v = lisp.prim_string_lower(_CONTEXT, [lisp.VString('')])
     assert v.is_string() and v.value() == ''
-    v = lisp.prim_string_lower([lisp.VString('Alice')])
+    v = lisp.prim_string_lower(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_string() and v.value() == 'alice'
-    v = lisp.prim_string_lower([lisp.VString('Alice Bob')])
+    v = lisp.prim_string_lower(_CONTEXT, [lisp.VString('Alice Bob')])
     assert v.is_string() and v.value() == 'alice bob'
     
 
 def test_prim_string_upper ():
-    v = lisp.prim_string_upper([lisp.VString('')])
+    v = lisp.prim_string_upper(_CONTEXT, [lisp.VString('')])
     assert v.is_string() and v.value() == ''
-    v = lisp.prim_string_upper([lisp.VString('Alice')])
+    v = lisp.prim_string_upper(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_string() and v.value() == 'ALICE'
-    v = lisp.prim_string_upper([lisp.VString('Alice Bob')])
+    v = lisp.prim_string_upper(_CONTEXT, [lisp.VString('Alice Bob')])
     assert v.is_string() and v.value() == 'ALICE BOB'
 
 
 def test_prim_string_substring ():
-    v = lisp.prim_string_substring([lisp.VString('')])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('')])
     assert v.is_string() and v.value() == ''
-    v = lisp.prim_string_substring([lisp.VString('Alice')])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_string() and v.value() == 'Alice'
-    v = lisp.prim_string_substring([lisp.VString('Alice'), lisp.VInteger(0)])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice'), lisp.VInteger(0)])
     assert v.is_string() and v.value() == 'Alice'
-    v = lisp.prim_string_substring([lisp.VString('Alice'), lisp.VInteger(1)])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice'), lisp.VInteger(1)])
     assert v.is_string() and v.value() == 'lice'
-    v = lisp.prim_string_substring([lisp.VString('Alice'), lisp.VInteger(2)])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice'), lisp.VInteger(2)])
     assert v.is_string() and v.value() == 'ice'
-    v = lisp.prim_string_substring([lisp.VString('Alice'), lisp.VInteger(0), lisp.VInteger(5)])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice'), lisp.VInteger(0), lisp.VInteger(5)])
     assert v.is_string() and v.value() == 'Alice'
-    v = lisp.prim_string_substring([lisp.VString('Alice'), lisp.VInteger(0), lisp.VInteger(3)])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice'), lisp.VInteger(0), lisp.VInteger(3)])
     assert v.is_string() and v.value() == 'Ali'
-    v = lisp.prim_string_substring([lisp.VString('Alice'), lisp.VInteger(2), lisp.VInteger(3)])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice'), lisp.VInteger(2), lisp.VInteger(3)])
     assert v.is_string() and v.value() == 'i'
-    v = lisp.prim_string_substring([lisp.VString('Alice'), lisp.VInteger(0), lisp.VInteger(0)])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice'), lisp.VInteger(0), lisp.VInteger(0)])
     assert v.is_string() and v.value() == ''
-    v = lisp.prim_string_substring([lisp.VString('Alice'), lisp.VInteger(3), lisp.VInteger(3)])
+    v = lisp.prim_string_substring(_CONTEXT, [lisp.VString('Alice'), lisp.VInteger(3), lisp.VInteger(3)])
     assert v.is_string() and v.value() == ''
 
 
@@ -1654,23 +1656,23 @@ def _unmake_list (lst):
         
     
 def test_prim_apply ():
-    def prim (args):
+    def prim (ctxt, args):
         return (args[0], args[1])
-    v = lisp.prim_apply([lisp.VPrimitive('test', prim, 2, 2),
+    v = lisp.prim_apply(_CONTEXT, [lisp.VPrimitive('test', prim, 2, 2),
                          _make_list([lisp.VInteger(42), lisp.VString('Alice')])])
     assert v[0].is_number() and v[0].value() == 42
     assert v[1].is_string() and v[1].value() == 'Alice'
-    v = lisp.prim_apply([lisp.VFunction(['a', 'b'], lisp.Symbol('a'), lisp.Environment()),
+    v = lisp.prim_apply(_CONTEXT, [lisp.VFunction(['a', 'b'], lisp.Symbol('a'), lisp.Environment()),
                          _make_list([lisp.VInteger(42), lisp.VString('Alice')])])
     assert v.is_number() and v.value() == 42
 
 
 def test_prim_cons ():
-    v = lisp.prim_cons([lisp.VInteger(42), lisp.VEmpty()])
+    v = lisp.prim_cons(_CONTEXT, [lisp.VInteger(42), lisp.VEmpty()])
     l = _unmake_list(v)
     assert len(l) == 1
     assert l[0].is_number() and l[0].value() == 42
-    v = lisp.prim_cons([lisp.VInteger(42), _make_list([lisp.VString('Alice'), lisp.VString('Bob')])])
+    v = lisp.prim_cons(_CONTEXT, [lisp.VInteger(42), _make_list([lisp.VString('Alice'), lisp.VString('Bob')])])
     l = _unmake_list(v)
     assert len(l) == 3
     assert l[0].is_number() and l[0].value() == 42
@@ -1679,15 +1681,15 @@ def test_prim_cons ():
 
 
 def test_prim_append ():
-    v = lisp.prim_append([])
+    v = lisp.prim_append(_CONTEXT, [])
     l = _unmake_list(v)
     assert len(l) == 0
-    v = lisp.prim_append([_make_list([lisp.VInteger(1), lisp.VInteger(2)])])
+    v = lisp.prim_append(_CONTEXT, [_make_list([lisp.VInteger(1), lisp.VInteger(2)])])
     l = _unmake_list(v)
     assert len(l) == 2
     assert l[0].is_number() and l[0].value() == 1
     assert l[1].is_number() and l[1].value() == 2
-    v = lisp.prim_append([_make_list([lisp.VInteger(1), lisp.VInteger(2)]),
+    v = lisp.prim_append(_CONTEXT, [_make_list([lisp.VInteger(1), lisp.VInteger(2)]),
                           _make_list([lisp.VInteger(3), lisp.VInteger(4)])])
     l = _unmake_list(v)
     assert len(l) == 4
@@ -1695,7 +1697,7 @@ def test_prim_append ():
     assert l[1].is_number() and l[1].value() == 2
     assert l[2].is_number() and l[2].value() == 3
     assert l[3].is_number() and l[3].value() == 4
-    v = lisp.prim_append([_make_list([lisp.VInteger(1), lisp.VInteger(2)]),
+    v = lisp.prim_append(_CONTEXT, [_make_list([lisp.VInteger(1), lisp.VInteger(2)]),
                           _make_list([lisp.VInteger(3), lisp.VInteger(4)]),
                           _make_list([lisp.VInteger(5), lisp.VInteger(6)])])
     l = _unmake_list(v)
@@ -1709,7 +1711,7 @@ def test_prim_append ():
 
 
 def test_prim_reverse ():
-    v = lisp.prim_reverse([_make_list([lisp.VInteger(1),
+    v = lisp.prim_reverse(_CONTEXT, [_make_list([lisp.VInteger(1),
                                        lisp.VInteger(2),
                                        lisp.VInteger(3),
                                        lisp.VInteger(4)])])
@@ -1722,19 +1724,19 @@ def test_prim_reverse ():
     
 
 def test_prim_first ():
-    v = lisp.prim_first([_make_list([lisp.VInteger(42)])])
+    v = lisp.prim_first(_CONTEXT, [_make_list([lisp.VInteger(42)])])
     assert v.is_number() and v.value() == 42
-    v = lisp.prim_first([_make_list([lisp.VInteger(42),
+    v = lisp.prim_first(_CONTEXT, [_make_list([lisp.VInteger(42),
                                      lisp.VString('Alice'),
                                      lisp.VString('Bob')])])
     assert v.is_number() and v.value() == 42
 
     
 def test_prim_rest ():
-    v = lisp.prim_rest([_make_list([lisp.VInteger(42)])])
+    v = lisp.prim_rest(_CONTEXT, [_make_list([lisp.VInteger(42)])])
     l = _unmake_list(v)
     assert len(l) == 0
-    v = lisp.prim_rest([_make_list([lisp.VInteger(42),
+    v = lisp.prim_rest(_CONTEXT, [_make_list([lisp.VInteger(42),
                                     lisp.VString('Alice'),
                                     lisp.VString('Bob')])])
     l = _unmake_list(v)
@@ -1744,22 +1746,22 @@ def test_prim_rest ():
 
 
 def test_prim_list ():
-    v = lisp.prim_list([])
+    v = lisp.prim_list(_CONTEXT, [])
     l = _unmake_list(v)
     assert len(l) == 0
-    v = lisp.prim_list([lisp.VInteger(42)])
+    v = lisp.prim_list(_CONTEXT, [lisp.VInteger(42)])
     l = _unmake_list(v)
     assert len(l) == 1
     assert l[0].is_number() and l[0].value() == 42
-    v = lisp.prim_list([lisp.VInteger(42),
-                        lisp.VString('Alice')])
+    v = lisp.prim_list(_CONTEXT, [lisp.VInteger(42),
+                                  lisp.VString('Alice')])
     l = _unmake_list(v)
     assert len(l) == 2
     assert l[0].is_number() and l[0].value() == 42
     assert l[1].is_string() and l[1].value() == 'Alice'
-    v = lisp.prim_list([lisp.VInteger(42),
-                        lisp.VString('Alice'),
-                        lisp.VString('Bob')])
+    v = lisp.prim_list(_CONTEXT, [lisp.VInteger(42),
+                                  lisp.VString('Alice'),
+                                  lisp.VString('Bob')])
     l = _unmake_list(v)
     assert len(l) == 3
     assert l[0].is_number() and l[0].value() == 42
@@ -1768,31 +1770,31 @@ def test_prim_list ():
     
 
 def test_prim_length ():
-    v = lisp.prim_length([_make_list([])])
+    v = lisp.prim_length(_CONTEXT, [_make_list([])])
     assert v.is_number() and v.value() == 0
-    v = lisp.prim_length([_make_list([lisp.VInteger(42)])])
+    v = lisp.prim_length(_CONTEXT, [_make_list([lisp.VInteger(42)])])
     assert v.is_number() and v.value() == 1
-    v = lisp.prim_length([_make_list([lisp.VInteger(42),
+    v = lisp.prim_length(_CONTEXT, [_make_list([lisp.VInteger(42),
                                       lisp.VString('Alice')])])
     assert v.is_number() and v.value() == 2
-    v = lisp.prim_length([_make_list([lisp.VInteger(42),
+    v = lisp.prim_length(_CONTEXT, [_make_list([lisp.VInteger(42),
                                       lisp.VString('Alice'),
                                       lisp.VString('Bob')])])
     assert v.is_number() and v.value() == 3
 
 
 def test_prim_nth ():
-    v = lisp.prim_nth([_make_list([lisp.VInteger(42),
+    v = lisp.prim_nth(_CONTEXT, [_make_list([lisp.VInteger(42),
                                    lisp.VString('Alice'),
                                    lisp.VString('Bob')]),
                        lisp.VInteger(0)])
     assert v.is_number() and v.value() == 42
-    v = lisp.prim_nth([_make_list([lisp.VInteger(42),
+    v = lisp.prim_nth(_CONTEXT, [_make_list([lisp.VInteger(42),
                                    lisp.VString('Alice'),
                                    lisp.VString('Bob')]),
                        lisp.VInteger(1)])
     assert v.is_string() and v.value() == 'Alice'
-    v = lisp.prim_nth([_make_list([lisp.VInteger(42),
+    v = lisp.prim_nth(_CONTEXT, [_make_list([lisp.VInteger(42),
                                    lisp.VString('Alice'),
                                    lisp.VString('Bob')]),
                        lisp.VInteger(2)])
@@ -1800,15 +1802,15 @@ def test_prim_nth ():
     
 
 def test_prim_map ():
-    def prim1 (args):
+    def prim1 (ctxt, args):
         return args[0]
-    def prim2 (args):
+    def prim2 (ctxt, args):
         return args[1]
-    v = lisp.prim_map([lisp.VPrimitive('test', prim1, 1),
+    v = lisp.prim_map(_CONTEXT, [lisp.VPrimitive('test', prim1, 1),
                        _make_list([])])
     l = _unmake_list(v)
     assert len(l) == 0
-    v = lisp.prim_map([lisp.VPrimitive('test', prim1, 1),
+    v = lisp.prim_map(_CONTEXT, [lisp.VPrimitive('test', prim1, 1),
                        _make_list([lisp.VInteger(42),
                                    lisp.VString('Alice'),
                                    lisp.VString('Bob')])])
@@ -1817,17 +1819,17 @@ def test_prim_map ():
     assert l[0].is_number() and l[0].value() == 42
     assert l[1].is_string() and l[1].value() == 'Alice'
     assert l[2].is_string() and l[2].value() == 'Bob'
-    v = lisp.prim_map([lisp.VPrimitive('test', prim2, 2),
+    v = lisp.prim_map(_CONTEXT, [lisp.VPrimitive('test', prim2, 2),
                        _make_list([]),
                        _make_list([])])
     l = _unmake_list(v)
     assert len(l) == 0
-    v = lisp.prim_map([lisp.VPrimitive('test', prim2, 2),
+    v = lisp.prim_map(_CONTEXT, [lisp.VPrimitive('test', prim2, 2),
                        _make_list([]),
                        _make_list([lisp.VInteger(42)])])
     l = _unmake_list(v)
     assert len(l) == 0
-    v = lisp.prim_map([lisp.VPrimitive('test', prim2, 2),
+    v = lisp.prim_map(_CONTEXT, [lisp.VPrimitive('test', prim2, 2),
                        _make_list([lisp.VInteger(42),
                                    lisp.VString('Alice'),
                                    lisp.VString('Bob')]),
@@ -1842,21 +1844,21 @@ def test_prim_map ():
 
 
 def test_prim_filter ():
-    def prim_none (args):
+    def prim_none (ctxt, args):
         return lisp.VBoolean(False)
-    def prim_int (args):
+    def prim_int (ctxt, args):
         return lisp.VBoolean(args[0].is_number())
-    v = lisp.prim_filter([lisp.VPrimitive('test', prim_none, 1),
+    v = lisp.prim_filter(_CONTEXT, [lisp.VPrimitive('test', prim_none, 1),
                           _make_list([])])
     l = _unmake_list(v)
     assert len(l) == 0
-    v = lisp.prim_filter([lisp.VPrimitive('test', prim_none, 1),
+    v = lisp.prim_filter(_CONTEXT, [lisp.VPrimitive('test', prim_none, 1),
                           _make_list([lisp.VInteger(42),
                                       lisp.VString('Alice'),
                                       lisp.VString('Bob')])])
     l = _unmake_list(v)
     assert len(l) == 0
-    v = lisp.prim_filter([lisp.VPrimitive('test', prim_int, 1),
+    v = lisp.prim_filter(_CONTEXT, [lisp.VPrimitive('test', prim_int, 1),
                           _make_list([lisp.VInteger(42),
                                       lisp.VString('Alice'),
                                       lisp.VString('Bob')])])
@@ -1866,28 +1868,28 @@ def test_prim_filter ():
 
 
 def test_prim_foldr ():
-    def prim (args):
+    def prim (ctxt, args):
         return lisp.VString(args[0].value() + '(' + args[1].value() + ')')
-    v = lisp.prim_foldr([lisp.VPrimitive('test', prim, 2),
-                         _make_list([]),
-                         lisp.VString('base')])
+    v = lisp.prim_foldr(_CONTEXT, [lisp.VPrimitive('test', prim, 2),
+                                   _make_list([]),
+                                   lisp.VString('base')])
     assert v.is_string() and v.value() == 'base'
-    v = lisp.prim_foldr([lisp.VPrimitive('test', prim, 2),
-                         _make_list([lisp.VString('Alice'),
-                                     lisp.VString('Bob'),
-                                     lisp.VString('Charlie')]),
-                         lisp.VString('base')])
+    v = lisp.prim_foldr(_CONTEXT, [lisp.VPrimitive('test', prim, 2),
+                                   _make_list([lisp.VString('Alice'),
+                                               lisp.VString('Bob'),
+                                               lisp.VString('Charlie')]),
+                                   lisp.VString('base')])
     assert v.is_string() and v.value() == 'Alice(Bob(Charlie(base)))'
 
 
 def test_prim_foldl ():
-    def prim (args):
+    def prim (ctxt, args):
         return lisp.VString('(' + args[0].value() + ')' + args[1].value())
-    v = lisp.prim_foldl([lisp.VPrimitive('test', prim, 2),
+    v = lisp.prim_foldl(_CONTEXT, [lisp.VPrimitive('test', prim, 2),
                          lisp.VString('base'),
                          _make_list([])])
     assert v.is_string() and v.value() == 'base'
-    v = lisp.prim_foldl([lisp.VPrimitive('test', prim, 2),
+    v = lisp.prim_foldl(_CONTEXT, [lisp.VPrimitive('test', prim, 2),
                          lisp.VString('base'),
                          _make_list([lisp.VString('Alice'),
                                      lisp.VString('Bob'),
@@ -1896,354 +1898,354 @@ def test_prim_foldl ():
 
 
 def test_prim_eqp ():
-    v = lisp.prim_eqp([lisp.VInteger(42),
+    v = lisp.prim_eqp(_CONTEXT, [lisp.VInteger(42),
                        lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_eqp([lisp.VInteger(42),
+    v = lisp.prim_eqp(_CONTEXT, [lisp.VInteger(42),
                        lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == False
     lst = _make_list([lisp.VInteger(42)])
-    v = lisp.prim_eqp([lst, lst])
+    v = lisp.prim_eqp(_CONTEXT, [lst, lst])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_eqp([lst, _make_list([lisp.VInteger(42)])])
+    v = lisp.prim_eqp(_CONTEXT, [lst, _make_list([lisp.VInteger(42)])])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_eqp([lst, lisp.VInteger(42)])
+    v = lisp.prim_eqp(_CONTEXT, [lst, lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_eqp([lst, _make_list([lisp.VInteger(84)])])
+    v = lisp.prim_eqp(_CONTEXT, [lst, _make_list([lisp.VInteger(84)])])
     assert v.is_boolean() and v.value() == False
 
 
 def test_prim_eqlp ():
-    v = lisp.prim_eqlp([lisp.VInteger(42),
+    v = lisp.prim_eqlp(_CONTEXT, [lisp.VInteger(42),
                        lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_eqlp([lisp.VInteger(42),
+    v = lisp.prim_eqlp(_CONTEXT, [lisp.VInteger(42),
                        lisp.VInteger(0)])
     assert v.is_boolean() and v.value() == False
     lst = _make_list([lisp.VInteger(42)])
-    v = lisp.prim_eqlp([lst, lst])
+    v = lisp.prim_eqlp(_CONTEXT, [lst, lst])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_eqlp([lst, _make_list([lisp.VInteger(42)])])
+    v = lisp.prim_eqlp(_CONTEXT, [lst, _make_list([lisp.VInteger(42)])])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_eqlp([lst, lisp.VInteger(42)])
+    v = lisp.prim_eqlp(_CONTEXT, [lst, lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_eqlp([lst, _make_list([lisp.VInteger(84)])])
+    v = lisp.prim_eqlp(_CONTEXT, [lst, _make_list([lisp.VInteger(84)])])
     assert v.is_boolean() and v.value() == False
     ref = lisp.VReference(lisp.VInteger(42))
-    v = lisp.prim_eqlp([ref, ref])
+    v = lisp.prim_eqlp(_CONTEXT, [ref, ref])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_eqlp([ref, lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_eqlp(_CONTEXT, [ref, lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_eqlp([ref, lisp.VReference(lisp.VInteger(0))])
+    v = lisp.prim_eqlp(_CONTEXT, [ref, lisp.VReference(lisp.VInteger(0))])
     assert v.is_boolean() and v.value() == False
     
 
 def test_prim_emptyp ():
-    v = lisp.prim_emptyp([lisp.VEmpty()])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_emptyp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VBoolean(True)])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VInteger(42)])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VString('Alice')])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VSymbol('Alice')])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VNil()])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False 
-    v = lisp.prim_emptyp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_emptyp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_emptyp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
    
 
 def test_prim_consp ():
-    v = lisp.prim_consp([lisp.VEmpty()])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_consp([lisp.VBoolean(True)])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VInteger(42)])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VString('Alice')])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VSymbol('Alice')])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VNil()])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False 
-    v = lisp.prim_consp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_consp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_consp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
     
 
 def test_prim_listp ():
-    v = lisp.prim_listp([lisp.VEmpty()])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_listp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_listp([lisp.VBoolean(True)])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_listp([lisp.VInteger(42)])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_listp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_listp([lisp.VString('Alice')])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_listp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_listp([lisp.VSymbol('Alice')])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_listp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_listp([lisp.VNil()])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False 
-    v = lisp.prim_listp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_listp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_listp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
 
 
 def test_prim_numberp ():
-    v = lisp.prim_numberp([lisp.VEmpty()])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VBoolean(True)])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VInteger(42)])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_numberp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VString('Alice')])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VSymbol('Alice')])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VNil()])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False 
-    v = lisp.prim_numberp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_numberp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_numberp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
 
 
 def test_prim_booleanp ():
-    v = lisp.prim_booleanp([lisp.VEmpty()])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VBoolean(True)])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_booleanp([lisp.VInteger(42)])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VString('Alice')])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VSymbol('Alice')])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VNil()])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False 
-    v = lisp.prim_booleanp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_booleanp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_booleanp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
     
 
 def test_prim_stringp ():
-    v = lisp.prim_stringp([lisp.VEmpty()])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_stringp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_stringp([lisp.VBoolean(True)])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_stringp([lisp.VInteger(42)])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_stringp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_stringp([lisp.VString('Alice')])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_stringp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_stringp([lisp.VSymbol('Alice')])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_stringp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_stringp([lisp.VNil()])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False 
-    v = lisp.prim_stringp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_stringp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_stringp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
 
 
 def test_prim_symbolp ():
-    v = lisp.prim_symbolp([lisp.VEmpty()])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_symbolp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_symbolp([lisp.VBoolean(True)])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_symbolp([lisp.VInteger(42)])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_symbolp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_symbolp([lisp.VString('Alice')])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_symbolp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_symbolp([lisp.VSymbol('Alice')])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_symbolp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_symbolp([lisp.VNil()])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False 
-    v = lisp.prim_symbolp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_symbolp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_symbolp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
 
 
 def test_prim_functionp ():
-    v = lisp.prim_functionp([lisp.VEmpty()])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VBoolean(True)])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VInteger(42)])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VString('Alice')])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VSymbol('Alice')])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_functionp([lisp.VNil()])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False 
-    v = lisp.prim_functionp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_functionp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_functionp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == True
 
 
 def test_prim_nilp ():
-    v = lisp.prim_nilp([lisp.VEmpty()])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VBoolean(True)])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VInteger(42)])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VString('Alice')])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VSymbol('Alice')])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VNil()])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == True 
-    v = lisp.prim_nilp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_nilp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_nilp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
 
 
 def test_prim_refp ():
-    v = lisp.prim_refp([lisp.VEmpty()])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VEmpty()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VCons(lisp.VInteger(42), lisp.VEmpty())])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VBoolean(True)])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VBoolean(True)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VInteger(42)])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VInteger(42)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VReference(lisp.VInteger(42))])
     assert v.is_boolean() and v.value() == True
-    v = lisp.prim_refp([lisp.VString('Alice')])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VString('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VString(u'Test\u00e9')])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VString(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VSymbol('Alice')])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VSymbol('Alice')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VSymbol(u'Test\u00e9')])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VSymbol(u'Test\u00e9')])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VNil()])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VNil()])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VPrimitive('test', lambda args: args[0], 1)])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VPrimitive('test', lambda args: args[0], 1)])
     assert v.is_boolean() and v.value() == False
-    v = lisp.prim_refp([lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
+    v = lisp.prim_refp(_CONTEXT, [lisp.VFunction(['a'], lisp.VSymbol('a'), lisp.Environment())])
     assert v.is_boolean() and v.value() == False
 
 
 def test_prim_ref ():
     val = lisp.VInteger(42)
-    v = lisp.prim_ref([val])
+    v = lisp.prim_ref(_CONTEXT, [val])
     assert v.is_reference() and v.value() == val
     val = lisp.VString("Alice")
-    v = lisp.prim_ref([val])
+    v = lisp.prim_ref(_CONTEXT, [val])
     assert v.is_reference() and v.value() == val
     val = lisp.VReference(lisp.VInteger(42))
-    v = lisp.prim_ref([val])
+    v = lisp.prim_ref(_CONTEXT, [val])
     assert v.is_reference() and v.value() == val
 
 
 def test_prim_ref_get ():
     val = lisp.VReference(lisp.VInteger(42))
-    v = lisp.prim_ref_get([val])
+    v = lisp.prim_ref_get(_CONTEXT, [val])
     assert v.is_number() and v.value() == 42
     val = lisp.VReference(lisp.VString("Alice"))
-    v = lisp.prim_ref_get([val])
+    v = lisp.prim_ref_get(_CONTEXT, [val])
     assert v.is_string() and v.value() == "Alice"
     val = lisp.VReference(lisp.VReference(lisp.VInteger(42)))
-    v = lisp.prim_ref_get([val])
+    v = lisp.prim_ref_get(_CONTEXT, [val])
     assert v.is_reference()
     assert v.value().is_number() and v.value().value() == 42
     
 
 def test_prim_ref_set ():
     val = lisp.VReference(lisp.VInteger(0))
-    v = lisp.prim_ref_set([val, lisp.VInteger(42)])
+    v = lisp.prim_ref_set(_CONTEXT, [val, lisp.VInteger(42)])
     assert v.is_nil()
     assert val.value().is_number() and val.value().value() == 42
     val = lisp.VReference(lisp.VInteger(0))
-    v = lisp.prim_ref_set([val, lisp.VString("Alice")])
+    v = lisp.prim_ref_set(_CONTEXT, [val, lisp.VString("Alice")])
     assert v.is_nil()
     assert val.value().is_string() and val.value().value() == "Alice"
     val = lisp.VReference(lisp.VInteger(0))
-    v = lisp.prim_ref_set([val, lisp.VReference(lisp.VInteger(42))])
+    v = lisp.prim_ref_set(_CONTEXT, [val, lisp.VReference(lisp.VInteger(42))])
     assert v.is_nil()
     assert val.value().is_reference()
     assert val.value().value().is_number() and val.value().value().value() == 42

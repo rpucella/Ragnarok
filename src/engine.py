@@ -77,7 +77,8 @@ class Engine (object):
         sexp = self.read(s)
         return self.eval_sexp(ctxt, sexp)
 
-    def eval_sexp (self, ctxt, env, sexp):
+    def eval_sexp (self, ctxt, sexp):
+        env = ctxt['env']
         (type, result) = self._parser.parse(sexp)
         if type == 'define':
             (name, expr) = result

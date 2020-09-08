@@ -498,6 +498,10 @@ class VFunction (Value):
     def value (self):
         return (self._params, self._body, self._env)
 
+    def apply (self, ctxt, values):
+        new_env = self.binding_env(values)
+        return self._body.eval(ctxt, new_env)
+    
 
 class VModule (Value):
     def __init__ (self, env):
@@ -1458,7 +1462,7 @@ def prim_string_substring (ctxt, args):
 def prim_apply (ctxt, args):
     check_arg_type('apply', args[0], lambda v:v.is_function())
     check_arg_type('apply', args[1], lambda v:v.is_list())
-    return args[0].apply(args[1].to_list())
+    return args[0].apply(ctxt, args[1].to_list())
     
 @primitive('cons', 2, 2)
 def prim_cons (ctxt, args):
@@ -1468,7 +1472,7 @@ def prim_cons (ctxt, args):
 @primitive('append', 0)
 def prim_append (ctxt, args):
     v = VEmpty()
-    for arg in reversed(ctxt, args):
+    for arg in reversed(args):
         check_arg_type('append', arg, lambda v:v.is_list())
         curr = arg
         temp = []
@@ -1502,7 +1506,7 @@ def prim_rest (ctxt, args):
 @primitive('list', 0)
 def prim_list (ctxt, args):
     v = VEmpty()
-    for arg in reversed(ctxt, args):
+    for arg in reversed(args):
         v = VCons(arg, v)
     return v
 
@@ -1540,7 +1544,7 @@ def prim_map (ctxt, args):
     while all(curr.is_cons() for curr in currs):
         firsts = [ curr.car() for curr in currs ]
         currs = [ curr.cdr() for curr in currs ]
-        temp.append(args[0].apply(firsts))
+        temp.append(args[0].apply(ctxt, firsts))
     v = VEmpty()
     for t in reversed(temp):
         v = VCons(t, v)
@@ -1553,7 +1557,7 @@ def prim_filter (ctxt, args):
     temp = []
     curr = args[1]
     while not curr.is_empty():
-        if args[0].apply([curr.car()]).is_true():
+        if args[0].apply(ctxt, [curr.car()]).is_true():
             temp.append(curr.car())
         curr = curr.cdr()
     v = VEmpty()
@@ -1572,7 +1576,7 @@ def prim_foldr (ctxt, args):
         curr = curr.cdr()
     v = args[2]
     for t in reversed(temp):
-        v = args[0].apply([t, v])
+        v = args[0].apply(ctxt, [t, v])
     return v
 
 @primitive('foldl', 3, 3)
@@ -1582,7 +1586,7 @@ def prim_foldl (ctxt, args):
     curr = args[2]
     v = args[1]
     while not curr.is_empty():
-        v = args[0].apply([v, curr.car()])
+        v = args[0].apply(ctxt, [v, curr.car()])
         curr = curr.cdr()
     return v
 
