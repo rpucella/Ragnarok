@@ -74,7 +74,7 @@ class Environment (object):
         result = self.find(symbol)
         if result:
             return result
-        raise LispError(f'Cannot find binding for {symbol}')
+        raise LispError(f'Cannot find binding for {symbol.upper()}')
 
     def bindings (self, as_dict=False):
         if self._previous:

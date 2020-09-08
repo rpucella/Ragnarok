@@ -92,9 +92,7 @@ class Shell:
             self.emit(str(v))
             
     def repl (self, on_error=None):
-        '''
-        A simple read-eval-print loop 
-        '''
+        self.emit(';; Ragnarok CLI shell')
         done = False
         while not done:
             try:
