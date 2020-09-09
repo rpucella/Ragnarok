@@ -44,25 +44,46 @@ with `pipenv run lint`, and run the unit tests in `tests/` with
 
 ## The language
 
-Ragnarok is a dialect of
-[Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)). Why
-a new dialect as opposed to either Common Lisp or Scheme? Good
-question. It may circle back to being Scheme-compatible. 
+Ragnarok is a dialect of [Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)). Whya new dialect as opposed to either Common Lisp or Scheme? Good question. It may circle back to being Scheme-compatible. 
+
+
+### Values
+
+Primitive values include integers such as `42` or `-1`, booleans such as `#t` and `#f`, string such as `"hello world"`, symbols such as `'foo`, lists (built using `cons`), and functions (built using `fun` or function declarations).
+
 
 ### Declarations
 
-`(def _identifier_ _expression_)`
+**(`def` _name_ _expression_)** : Define a constant _name_ with value the result of evaluating _expression_.
 
-`(def (_identifier_ _identifier_ ...) _expression_)`
+**(`def` (_name_ _arg_ ...) _body_)** : Define a function _name_ with parameters _arg_, ... with expression _body_ as a body.
 
 
-### Expressions
+### Special forms
 
-`(_if_ _expression1_ _expression2_ _expression3_)`
+**(`if` _expression1_ _expression2_ _expression3_)** : Conditional - if _expression1_ evaluates to true, evaluate _expression2_ otherwise _expression3_.
 
-...
+**(`let` ((_name_ _expression_) ...) _body_)** : Local declaration - evaluate _expression_ and bind it to _name_ before evaluating _body_.
 
-`(_expression1_ _expression2_ ...)` : application of function resulting from evaluating `_expression1_` to values resulting from evaluating `_expression2_`, ...
+**(`let*` ((_name_ _expression_) ...) _body_)**
+
+**(`letrec` ((_name_ _expression_) ...) _body_)**
+
+**(`loop` _loop-name_ ((_name_ _expression_) ...) _body)**
+
+**(`fun` (_name_ ...) _body_)**
+
+**(`funrec` _name_ (_name_ ...) _body_)**
+
+**(`quote` _expression_)**
+
+**(`do` _expression_ ...)**
+
+**(`and` _expression_ ...)**
+
+**(`or` _expression_ ...)**
+
+**(_expression1_ _expression2_ ...)** : Application - Evaluate _expression1_ to a function, evaluate _expression2_, ... to values, then apply the function to the values.
 
 
 ### Primitive operations
