@@ -1688,6 +1688,6 @@ def prim_dict_set (ctxt, args):
 
 
 @primitive('print', 0)
-def prim_print (self, ctxt, args):
+def prim_print (ctxt, args):
     result = ' '.join([arg.display() for arg in args])
     ctxt['print'](result)

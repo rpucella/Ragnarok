@@ -63,7 +63,8 @@ class Shell:
             'print': self.emit,
             'env': self._env,
             'set_module': self.set_module,
-            'modules': self._open_modules
+            'modules': self._open_modules,
+            'read_file': self.process_file
         }
 
     def set_module (self, name):
@@ -77,10 +78,25 @@ class Shell:
                 result = self._engine.eval_sexp(self.context(), sexp)
                 if 'report' in result:
                     self.emit(result['report'])
-                self.emit_result(result['result'])
+                return result
         except LispError as e:
             self.emit_error(e)
 
+    def process_file (self, full_input):
+        current_input = full_input
+        try:
+            while True:
+                result = self._engine.read(current_input, strict=False)
+                if not result:
+                    return
+                (sexp, current_input) = result
+                env = self.current_env()
+                result = self._engine.eval_sexp(self.context(), sexp)
+                if 'report' in result:
+                    self.emit(result['report'])
+        except LispError as e:
+            self.emit_error(e)
+            
     def emit (self, s):
         print(s)
 
@@ -107,7 +123,9 @@ class Shell:
                     if self.balance(full_input):
                         break
                     pr = self.cont_prompt()   # use continuation prompt after first iteration
-                self.process_line(full_input)
+                result = self.process_line(full_input)
+                if result:
+                    self.emit_result(result['result'])
             except EOFError:
                 done = True
             except LispQuit:

@@ -44,4 +44,27 @@ with `pipenv run lint`, and run the unit tests in `tests/` with
 
 ## The language
 
-TODO: add an overview of the language
+Ragnarok is a dialect of
+[Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)). Why
+a new dialect as opposed to either Common Lisp or Scheme? Good
+question. It may circle back to being Scheme-compatible. 
+
+### Declarations
+
+`(def _identifier_ _expression_)`
+
+`(def (_identifier_ _identifier_ ...) _expression_)`
+
+
+### Expressions
+
+`(_if_ _expression1_ _expression2_ _expression3_)`
+
+...
+
+`(_expression1_ _expression2_ ...)` : application of function resulting from evaluating `_expression1_` to values resulting from evaluating `_expression2_`, ...
+
+
+### Primitive operations
+
+...
