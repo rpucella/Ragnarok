@@ -32,15 +32,16 @@ class Environment (object):
         for (name, value) in bindings:
             self.add(name, value)
 
-    def add (self, symbol, value):
+    def add (self, symbol, value, source=None):
         '''
         Add a binding to the current environment
         Replaces old binding if one exists
         '''
         symbol = symbol.upper()
-        self._bindings[symbol] = value
+        self._bindings[symbol] = {'value': value,
+                                  'source': source}
 
-    def update (self, symbol, value):
+    def update (self, symbol, value, source=None):
         '''
         Update an existing binding
         Look back into higher environments to see
@@ -49,7 +50,8 @@ class Environment (object):
         '''
         symbol = symbol.upper()
         if symbol in self._bindings:
-            self._bindings[symbol] = value
+            self._bindings[symbol] = {'value': value,
+                                      'source': source}
             return True
         updated = self._previous and self._previous.update(symbol, value)
         if not updated:
@@ -566,17 +568,17 @@ class Symbol (Expression):
         if self._qualifiers:
             if len(self._qualifiers) > 1:
                 raise LispError('No support for nested modules yet')
-            v = env.lookup(self._qualifiers[0])
+            v = env.lookup(self._qualifiers[0])['value']
             if not v.is_module():
                 raise LispError('Symbol {} does not represent a module'.format(self._qualifiers[0]))
-            v = v.env().lookup(self._symbol)
+            v = v.env().lookup(self._symbol)['value']
         else:
             # unqualified name - look in the default environment + opened modules if any
             v = env.find(self._symbol)
             if v is None:
                 if 'modules' in ctxt:
                     for m in ctxt['modules']:
-                        mv = env.lookup(m)
+                        mv = env.lookup(m)['value']
                         if mv.is_module():
                             v = mv.env().find(self._symbol)
                             if v is not None:
@@ -585,6 +587,7 @@ class Symbol (Expression):
                         raise LispError(f'Cannot find binding for {self._symbol}')
                 else:
                     raise LispError(f'Cannot find binding for {self._symbol}')
+            v = v['value']
         if v is None:
             # this can't arise at this point I think...
             raise LispError('Trying to access a non-initialized binding {} in a LETREC'.format(self._symbol))

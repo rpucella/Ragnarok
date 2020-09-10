@@ -87,7 +87,6 @@ class Shell:
                 return result
         except LispError as e:
             self.emit_error(e)
-            return { 'result': VNil() }
 
     def process_file (self, full_input):
         current_input = full_input
@@ -130,9 +129,10 @@ class Shell:
                         break
                     pr = self.cont_prompt()   # use continuation prompt after first iteration
                 result = self.process_line(full_input)
-                self.emit_result(result['result'])
-                if not result['result'].is_nil():
-                    self._last_value = result['result']
+                if result:
+                    self.emit_result(result['result'])
+                    if not result['result'].is_nil():
+                        self._last_value = result['result']
             except EOFError:
                 done = True
             except LispQuit:
