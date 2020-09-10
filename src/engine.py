@@ -44,13 +44,13 @@ class Engine (object):
             (name, expr) = result
             name = name.upper()
             v = expr.eval(ctxt, env)
-            env.add(name, v)
+            ctxt['def_env'].add(name, v)
             return { 'result': VNil(), 'report': ';; {}'.format(name)}
         if type == 'defun':
             (name, params, expr) = result
             params = [ p.upper() for p in params ]
             v = VFunction(params, expr, env)
-            env.add(name, v)
+            ctxt['def_env'].add(name, v)
             return { 'result': VNil(), 'report': ';; {}'.format(name)}
         if type == 'exp':
             return { 'result': result.eval(ctxt, env) }

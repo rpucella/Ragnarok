@@ -1,6 +1,6 @@
 import sys
 
-from .lisp import Environment, LispQuit, LispError, LispParseError
+from .lisp import Environment, LispQuit, LispError, LispParseError, VNil
 from .engine import Engine
 
 class Shell:
@@ -9,6 +9,7 @@ class Shell:
         self._module = None
         self._open_modules = ['interactive', 'core']
         self._env = Environment(previous=engine.root())
+        self._last_value = VNil()
 
     def prompt (self):
         name = self._module or 'scratch'
@@ -18,11 +19,16 @@ class Shell:
         name = self._module or 'scratch'
         return '.' * len(name) + '  '
 
-    def current_env (self):
+    def current_env (self, last_value=False):
+        def attach_ival (env):
+            if last_value:
+                return Environment(bindings=[('last-value', self._last_value)], previous=env)
+            else:
+                return env
         if self._module:
-            return self._env.lookup(self._module).env()
+            return attach_ival(self._env.lookup(self._module).env())
         else:
-            return self._env
+            return attach_ival(self._env)
 
     def balance (self, str):
         state = 'normal'
@@ -61,7 +67,8 @@ class Shell:
     def context (self):
         return {
             'print': self.emit,
-            'env': self._env,
+            'env': self.current_env(last_value=True),
+            'def_env': self.current_env(),
             'set_module': self.set_module,
             'modules': self._open_modules,
             'read_file': self.process_file
@@ -74,13 +81,13 @@ class Shell:
         try:
             sexp = self._engine.read(full_input)
             if sexp:
-                env = self.current_env()
                 result = self._engine.eval_sexp(self.context(), sexp)
                 if 'report' in result:
                     self.emit(result['report'])
                 return result
         except LispError as e:
             self.emit_error(e)
+            return { 'result': VNil() }
 
     def process_file (self, full_input):
         current_input = full_input
@@ -90,7 +97,6 @@ class Shell:
                 if not result:
                     return
                 (sexp, current_input) = result
-                env = self.current_env()
                 result = self._engine.eval_sexp(self.context(), sexp)
                 if 'report' in result:
                     self.emit(result['report'])
@@ -124,8 +130,9 @@ class Shell:
                         break
                     pr = self.cont_prompt()   # use continuation prompt after first iteration
                 result = self.process_line(full_input)
-                if result:
-                    self.emit_result(result['result'])
+                self.emit_result(result['result'])
+                if not result['result'].is_nil():
+                    self._last_value = result['result']
             except EOFError:
                 done = True
             except LispQuit:
