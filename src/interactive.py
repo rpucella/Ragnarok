@@ -1,10 +1,25 @@
+import uuid
+import tempfile
+import os
+
 from .lisp import *
 
+INTERACTIVE = []
 
+def primitive(name, min, max=None):
+    name = name.upper()
+    def decorator(func):
+        INTERACTIVE.append((name, VPrimitive(name, func, min, max)))
+        return func
+    return decorator
+
+
+@primitive('quit', 0, 0)
 def prim_quit (ctxt, args):
     raise LispQuit
 
 
+@primitive('env', 0, 1)
 def prim_env (ctxt, args):
     def show_env (env):
         all_bindings = env.bindings()
@@ -26,7 +41,8 @@ def prim_env (ctxt, args):
         show_env(env)
     return VNil()
 
-        
+
+@primitive('module', 0, 1)
 def prim_module (ctxt, args):
     if len(args) > 0:
         check_arg_type('module', args[0], lambda v:v.is_symbol())
@@ -43,6 +59,7 @@ def prim_module (ctxt, args):
     return VNil()
 
 
+@primitive('load', 1, 1)
 def prim_load (ctxt, args):
     check_arg_type('load', args[0], lambda v:v.is_string())
     filename = args[0].value()
@@ -52,9 +69,23 @@ def prim_load (ctxt, args):
     return VNil()
 
 
-INTERACTIVE = [
-    ('quit', VPrimitive('quit', prim_quit, 0, 0)),
-    ('module', VPrimitive('module', prim_module, 0, 1)),
-    ('env', VPrimitive('env', prim_env, 0, 1)),
-    ('load', VPrimitive('load', prim_load, 1, 1))
-]
+@primitive('define', 1, 1)
+def prim_define (ctxt, args):
+    check_arg_type('define', args[0], lambda v:v.is_symbol())
+    # what if it's qualified?
+    name = args[0].value()
+    uid = uuid.uuid1().hex
+    path = os.path.join(tempfile.gettempdir(), f'def_{uuid.uuid1().hex}')
+    with open(path, 'wt') as fp:
+        fp.write(f"(def ({name} )\n   'nothing\n)")
+    print(path)
+    os.system(f'emacs -nw {path}')
+    with open(path, 'rt') as fp:
+        content = fp.read()
+    print('Removing file')
+    os.remove(path)
+    # need to first check that what is being defined is just what's being defined
+    ctxt['read_file'](content)
+    return VNil()
+
+
