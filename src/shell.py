@@ -26,7 +26,7 @@ class Shell:
             else:
                 return env
         if self._module:
-            return attach_ival(self._env.lookup(self._module).env())
+            return attach_ival(self._env.lookup(self._module)['value'].env())
         else:
             return attach_ival(self._env)
 
@@ -71,7 +71,8 @@ class Shell:
             'def_env': self.current_env(),
             'set_module': self.set_module,
             'modules': self._open_modules,
-            'read_file': self.process_file
+            'read_file': self.process_file,
+            'shell': self
         }
 
     def set_module (self, name):

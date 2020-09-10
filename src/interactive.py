@@ -34,7 +34,7 @@ def prim_env (ctxt, args):
         if name == 'SCRATCH':
             show_env(env)
         elif name in env.modules():
-            show_env(env.lookup(name).env())
+            show_env(env.lookup(name)['value'].env())
         else:
             raise LispError('No module {}'.format(name))
     else:
@@ -85,7 +85,11 @@ def prim_define (ctxt, args):
     print('Removing file')
     os.remove(path)
     # need to first check that what is being defined is just what's being defined
-    ctxt['read_file'](content)
+    s = ctxt['shell']._engine.read(content, strict=True)
+    (type, result) = ctxt['shell']._engine.parse_sexp(ctxt, s)
+    if type != 'defun' or result[0].upper() != name:
+        raise LispError('Not defining function {}'.format(name))
+    ctxt['shell']._engine.eval_parsed_sexp(ctxt, type, result)
     return VNil()
 
 

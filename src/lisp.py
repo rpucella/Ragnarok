@@ -84,7 +84,7 @@ class Environment (object):
         else:
             result = {}
         for n in self._bindings:
-            result[n] = self._bindings[n]
+            result[n] = self._bindings[n]['value']
         if as_dict:
             return result
         else:
@@ -94,7 +94,7 @@ class Environment (object):
         return [n for (n, _) in self.bindings()]
 
     def modules (self):
-        return [n for (n, v) in self.bindings() if v.is_module()]
+       return [n for (n, v) in self.bindings() if v.is_module()]
 
     def previous (self):
         return self._previous

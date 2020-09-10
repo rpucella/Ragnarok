@@ -37,9 +37,11 @@ class Engine (object):
         sexp = self.read(s)
         return self.eval_sexp(ctxt, sexp)
 
-    def eval_sexp (self, ctxt, sexp):
+    def parse_sexp (self, ctxt, sexp):
+        return self._parser.parse(sexp)
+
+    def eval_parsed_sexp (self, ctxt, type, result):
         env = ctxt['env']
-        (type, result) = self._parser.parse(sexp)
         if type == 'define':
             (name, expr) = result
             name = name.upper()
@@ -55,7 +57,11 @@ class Engine (object):
         if type == 'exp':
             return { 'result': result.eval(ctxt, env) }
         raise LispError('Cannot recognize top level type {}'.format(type))
-
+        
+    def eval_sexp (self, ctxt, sexp):
+        (type, result) = self._parser.parse(sexp)
+        return self.eval_parsed_sexp(ctxt, type, result)
+           
     def root (self):
         return self._root
 
