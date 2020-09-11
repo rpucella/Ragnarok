@@ -69,7 +69,7 @@ def prim_load (ctxt, args):
     return VNil()
 
 
-@primitive('define', 1, 1)
+@primitive('new-function', 1, 1)
 def prim_define (ctxt, args):
     check_arg_type('define', args[0], lambda v:v.is_symbol())
     # what if it's qualified?
@@ -77,7 +77,7 @@ def prim_define (ctxt, args):
     uid = uuid.uuid1().hex
     path = os.path.join(tempfile.gettempdir(), f'def_{uuid.uuid1().hex}')
     with open(path, 'wt') as fp:
-        fp.write(f"(def ({name} )\n   'nothing\n)")
+        fp.write(f"(def ({name} )\n  'nothing\n)")
     print(path)
     os.system(f'emacs -nw {path}')
     with open(path, 'rt') as fp:
@@ -87,9 +87,56 @@ def prim_define (ctxt, args):
     # need to first check that what is being defined is just what's being defined
     s = ctxt['shell']._engine.read(content, strict=True)
     (type, result) = ctxt['shell']._engine.parse_sexp(ctxt, s)
-    if type != 'defun' or result[0].upper() != name:
+    if type != 'def' or result[0].upper() != name:
         raise LispError('Not defining function {}'.format(name))
-    ctxt['shell']._engine.eval_parsed_sexp(ctxt, type, result)
+    ctxt['shell']._engine.eval_parsed_sexp(ctxt, type, result, source=content)
     return VNil()
 
 
+
+@primitive('new-constant', 1, 1)
+def prim_define (ctxt, args):
+    check_arg_type('define', args[0], lambda v:v.is_symbol())
+    # what if it's qualified?
+    name = args[0].value()
+    uid = uuid.uuid1().hex
+    path = os.path.join(tempfile.gettempdir(), f'def_{uuid.uuid1().hex}')
+    with open(path, 'wt') as fp:
+        fp.write(f"(const {name}\n  'nothing\n)")
+    print(path)
+    os.system(f'emacs -nw {path}')
+    with open(path, 'rt') as fp:
+        content = fp.read()
+    print('Removing file')
+    os.remove(path)
+    # need to first check that what is being defined is just what's being defined
+    s = ctxt['shell']._engine.read(content, strict=True)
+    (type, result) = ctxt['shell']._engine.parse_sexp(ctxt, s)
+    if type != 'const' or result[0].upper() != name:
+        raise LispError('Not defining function {}'.format(name))
+    ctxt['shell']._engine.eval_parsed_sexp(ctxt, type, result, source=content)
+    return VNil()
+
+
+@primitive('show-source', 1, 1)
+def prim_show_source (ctxt, args):
+    def show_env (env):
+        all_bindings = env.bindings()
+        width = max(len(b[0]) for b in all_bindings) + 1
+        for b in sorted(all_bindings, key=lambda x: x[0]):
+            ctxt['print'](f';; {(b[0] + " " * width)[:width]} {b[1]}')
+
+    env = ctxt['env']
+    check_arg_type('env', args[0], lambda v:v.is_symbol())
+    name = args[0].value()
+    content = ctxt['env'].find(name)
+    if not content:
+        raise LispError(f'Cannot find symbol {name} in environment')
+    else:
+        if content['source']:
+            for row in content['source'].split('\n'):
+                ctxt['print'](f';; {row}')
+        else:
+            ctxt['print'](';; No source available')
+    return VNil()
+    

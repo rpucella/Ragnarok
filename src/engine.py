@@ -40,19 +40,25 @@ class Engine (object):
     def parse_sexp (self, ctxt, sexp):
         return self._parser.parse(sexp)
 
-    def eval_parsed_sexp (self, ctxt, type, result):
+    def eval_parsed_sexp (self, ctxt, type, result, source=None):
         env = ctxt['env']
-        if type == 'define':
+        if type == 'var':
             (name, expr) = result
             name = name.upper()
             v = expr.eval(ctxt, env)
-            ctxt['def_env'].add(name, v)
+            ctxt['def_env'].add(name, v, mutable=True, source=source)
             return { 'result': VNil(), 'report': ';; {}'.format(name)}
-        if type == 'defun':
+        if type == 'const':
+            (name, expr) = result
+            name = name.upper()
+            v = expr.eval(ctxt, env)
+            ctxt['def_env'].add(name, v, source=source)
+            return { 'result': VNil(), 'report': ';; {}'.format(name)}
+        if type == 'def':
             (name, params, expr) = result
             params = [ p.upper() for p in params ]
             v = VFunction(params, expr, env)
-            ctxt['def_env'].add(name, v)
+            ctxt['def_env'].add(name, v, source=source)
             return { 'result': VNil(), 'report': ';; {}'.format(name)}
         if type == 'exp':
             return { 'result': result.eval(ctxt, env) }

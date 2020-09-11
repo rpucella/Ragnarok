@@ -32,16 +32,17 @@ class Environment (object):
         for (name, value) in bindings:
             self.add(name, value)
 
-    def add (self, symbol, value, source=None):
+    def add (self, symbol, value, source=None, mutable=False):
         '''
         Add a binding to the current environment
-        Replaces old binding if one exists
+        Replaces old binding if one exists in the same layer
         '''
         symbol = symbol.upper()
         self._bindings[symbol] = {'value': value,
-                                  'source': source}
+                                  'source': source,
+                                  'mutable': mutable}
 
-    def update (self, symbol, value, source=None):
+    def update (self, symbol, value, source=None, mutable=False):
         '''
         Update an existing binding
         Look back into higher environments to see
@@ -51,7 +52,8 @@ class Environment (object):
         symbol = symbol.upper()
         if symbol in self._bindings:
             self._bindings[symbol] = {'value': value,
-                                      'source': source}
+                                      'source': source,
+                                      'mutable': mutable}
             return True
         updated = self._previous and self._previous.update(symbol, value)
         if not updated:
@@ -454,6 +456,7 @@ class VPrimitive (Value):
     
 class VSymbol (Value):
     def __init__ (self, sym):
+        # TODO: this should probably split off the module qualifiers
         self._symbol = sym.upper()
 
     def __repr__ (self):
@@ -981,12 +984,15 @@ class Parser (object):
         return ' __{}_{}'.format(prefix, c)
 
     def parse (self, sexp):
-        result = self.parse_define(sexp)
+        result = self.parse_var(sexp)
         if result:
-            return ('define', result)
+            return ('var', result)
         result = self.parse_defun(sexp)
         if result:
-            return ('defun', result)
+            return ('def', result)
+        result = self.parse_def_const(sexp)
+        if result:
+            return ('const', result)
         result = self.parse_exp(sexp)
         if result:
             return ('exp', result)
@@ -1206,26 +1212,26 @@ class Parser (object):
     # Top level commands
     #
 
-    def parse_define (self, s):
-        p = self.parse_list([self.parse_keyword('def'),
+    def parse_var (self, s):
+        p = self.parse_list([self.parse_keyword('var'),
                              self.parse_identifier,
                              self.parse_exp])
         p = parse_wrap(p, lambda x: (x[1], x[2]))
         return p(s)
 
+    def parse_def_const (self, s):
+        p = self.parse_list([self.parse_keyword('const'),
+                             self.parse_identifier,
+                             self.parse_exp])
+        p = parse_wrap(p, lambda x: (x[1], x[2]))
+        return p(s)
 
     def parse_defun (self, s):
-        p1 = self.parse_list([self.parse_keyword('def'),
+        p = self.parse_list([self.parse_keyword('def'),
                               self.parse_list([self.parse_identifier],
                                               tail=self.parse_rep(self.parse_identifier))],
                              tail=self.parse_exps)
-        p1 = parse_wrap(p1, lambda x:(x[0][1][0][0], x[0][1][1], Do(x[1])))
-        p2 = self.parse_list([self.parse_keyword('defun'),
-                              self.parse_identifier,
-                              self.parse_rep(self.parse_identifier)],
-                             tail=self.parse_exps)
-        p2 = parse_wrap(p2, lambda x:(x[0][1], x[0][2], Do(x[1])))
-        p = parse_first([p1, p2])
+        p = parse_wrap(p, lambda x:(x[0][1][0][0], x[0][1][1], Do(x[1])))
         return p(s)
 
 
