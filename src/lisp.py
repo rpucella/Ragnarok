@@ -5,6 +5,23 @@ import re
 import functools
 
 
+_KW_DEF = 'def'
+_KW_CONST = 'const'
+_KW_VAR = 'var'
+_KW_LET = 'let'
+_KW_LETREC = 'letrec'
+_KW_LOOP = 'let'
+_KW_IF = 'if'
+_KW_FUN = 'fun'
+_KW_FUNREC = 'funrec'
+_KW_DO = 'do'
+_KW_QUOTE = 'quote'
+_KW_LETS = 'let*'
+_KW_DICT = 'dict'
+_KW_AND = 'and'
+_KW_OR = 'or'
+
+
 class LispError (Exception):
     def __init__ (self, msg, type='error'):
         super(LispError, self).__init__(f'{type.upper()}: {msg}')
@@ -263,6 +280,9 @@ class VDict (Value):
 
     def type (self):
         return 'dict'
+
+    def value (self):
+        return self._value
 
     def is_equal (self, v):
         # TODO - fix this comparions!
@@ -990,7 +1010,7 @@ class Parser (object):
         result = self.parse_defun(sexp)
         if result:
             return ('def', result)
-        result = self.parse_def_const(sexp)
+        result = self.parse_const(sexp)
         if result:
             return ('const', result)
         result = self.parse_exp(sexp)
@@ -1153,7 +1173,7 @@ class Parser (object):
 
     def parse_if (self, s):
 
-        p = self.parse_list([self.parse_keyword('if'),
+        p = self.parse_list([self.parse_keyword(_KW_IF),
                              self.parse_exp,
                              self.parse_exp,
                              self.parse_exp])
@@ -1163,7 +1183,7 @@ class Parser (object):
 
     def parse_lambda (self, s):
 
-        p = self.parse_list([self.parse_keyword('fun'),
+        p = self.parse_list([self.parse_keyword(_KW_FUN),
                              self.parse_rep(self.parse_identifier)],
                             tail=self.parse_exps)
         p = parse_wrap(p, lambda x:Lambda(x[0][1], Do(x[1])))
@@ -1172,7 +1192,7 @@ class Parser (object):
     
     def parse_do (self, s):
 
-        p = self.parse_list([self.parse_keyword('do')],
+        p = self.parse_list([self.parse_keyword(_KW_DO)],
                             tail=self.parse_exps)
         p = parse_wrap(p, lambda x: Do(x[1]))
         return p(s)
@@ -1180,14 +1200,14 @@ class Parser (object):
 
     def parse_quote (self, s):
 
-        p = self.parse_list([self.parse_keyword('quote'),
+        p = self.parse_list([self.parse_keyword(_KW_QUOTE),
                              lambda s: s])
         p = parse_wrap(p, lambda x: Quote(x[1]))
         return p(s)
 
 
     def parse_letrec (self, s):
-        p = self.parse_list([self.parse_keyword('letrec'),
+        p = self.parse_list([self.parse_keyword(_KW_LETREC),
                              self.parse_rep(self.parse_binding)],
                             tail=self.parse_exps)
         p = parse_wrap(p, lambda x: LetRec(x[0][1], Do(x[1])))
@@ -1213,21 +1233,21 @@ class Parser (object):
     #
 
     def parse_var (self, s):
-        p = self.parse_list([self.parse_keyword('var'),
+        p = self.parse_list([self.parse_keyword(_KW_VAR),
                              self.parse_identifier,
                              self.parse_exp])
         p = parse_wrap(p, lambda x: (x[1], x[2]))
         return p(s)
 
-    def parse_def_const (self, s):
-        p = self.parse_list([self.parse_keyword('const'),
+    def parse_const (self, s):
+        p = self.parse_list([self.parse_keyword(_KW_CONST),
                              self.parse_identifier,
                              self.parse_exp])
         p = parse_wrap(p, lambda x: (x[1], x[2]))
         return p(s)
 
     def parse_defun (self, s):
-        p = self.parse_list([self.parse_keyword('def'),
+        p = self.parse_list([self.parse_keyword(_KW_DEF),
                               self.parse_list([self.parse_identifier],
                                               tail=self.parse_rep(self.parse_identifier))],
                              tail=self.parse_exps)
@@ -1257,14 +1277,14 @@ class Parser (object):
         return p(s)
 
     def parse_let (self, s):
-        p = self.parse_list([self.parse_keyword('let'),
+        p = self.parse_list([self.parse_keyword(_KW_LET),
                              self.parse_rep(self.parse_binding)],
                        tail=self.parse_exps)
         p = parse_wrap(p, lambda x: self.mk_Let(x[0][1], Do(x[1])))
         return p(s)
 
     def parse_loop (self, s):
-        p = self.parse_list([self.parse_keyword('loop'),
+        p = self.parse_list([self.parse_keyword(_KW_LOOP),
                              self.parse_identifier,
                              self.parse_rep(self.parse_binding)],
                        tail=self.parse_exps)
@@ -1272,7 +1292,7 @@ class Parser (object):
         return p(s)
     
     def parse_funrec (self, s):
-        p = self.parse_list([self.parse_keyword('funrec'),
+        p = self.parse_list([self.parse_keyword(_KW_FUNREC),
                              self.parse_identifier,
                              self.parse_rep(self.parse_identifier)],
                             tail=self.parse_exps)
@@ -1280,7 +1300,7 @@ class Parser (object):
         return p(s)
     
     def parse_letstar (self, s):
-        p = self.parse_list([self.parse_keyword('let*'),
+        p = self.parse_list([self.parse_keyword(_KW_LETS),
                              self.parse_rep(self.parse_binding)],
                             tail=self.parse_exps)
         p = parse_wrap(p, lambda x: self.mk_LetStar(x[0][1], Do(x[1])))
@@ -1293,19 +1313,19 @@ class Parser (object):
         return p(s)
  
     def parse_dict (self, s):
-        p = self.parse_list([self.parse_keyword('dict')],
+        p = self.parse_list([self.parse_keyword(_KW_DICT)],
                             tail=self.parse_rep(self.parse_exp_pair))
         p = parse_wrap(p, lambda x: self.mk_Dict(x[1]))
         return p(s)
     
     def parse_and (self, s):
-        p = self.parse_list([self.parse_keyword('and')],
+        p = self.parse_list([self.parse_keyword(_KW_AND)],
                             tail=self.parse_exps)
         p = parse_wrap(p, lambda x: self.mk_And(x[1]))
         return p(s)
 
     def parse_or (self, s):
-        p = self.parse_list([self.parse_keyword('or')],
+        p = self.parse_list([self.parse_keyword(_KW_OR)],
                             tail=self.parse_exps)
         p = parse_wrap(p, lambda x: self.mk_Or(x[1]))
         return p(s)

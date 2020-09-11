@@ -1367,10 +1367,20 @@ def test_exp_parse_funrec ():
 # Declarations
 #
 
-def test_parse_define ():
+def test_parse_const ():
     env = lisp.Environment()
-    inp = _make_sexp(['def', 'a', '42'])
-    p = lisp.Parser().parse_define(inp)
+    inp = _make_sexp(['const', 'a', '42'])
+    p = lisp.Parser().parse_const(inp)
+    assert type(p) == type((1, 2))
+    assert p[0] == 'A'
+    v = p[1].eval(_CONTEXT, env)
+    assert v.is_number()
+    assert v.value() == 42
+
+def test_parse_var ():
+    env = lisp.Environment()
+    inp = _make_sexp(['var', 'a', '42'])
+    p = lisp.Parser().parse_const(inp)
     assert type(p) == type((1, 2))
     assert p[0] == 'A'
     v = p[1].eval(_CONTEXT, env)
