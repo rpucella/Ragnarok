@@ -570,7 +570,7 @@ def test_value_function ():
     
 
 def test_sexp_atom_symbol ():
-    s = lisp.SAtom(u'Alice')
+    s = lisp.SSymbol(u'Alice')
     assert s.is_atom()
     assert not s.is_empty()
     assert not s.is_cons()
@@ -578,13 +578,13 @@ def test_sexp_atom_symbol ():
     assert s.as_value().is_symbol()
     assert s.as_value().value() == u'ALICE'
     # accents
-    s = lisp.SAtom(u'Test\u00e9')
+    s = lisp.SString(u'Test\u00e9')
     assert s.content() == u'Test\u00e9'
     assert s.as_value().value() == u'TEST\u00c9'
 
     
 def test_sexp_string ():
-    s = lisp.SAtom('"Alice"')
+    s = lisp.SString('"Alice"')
     assert s.is_atom()
     assert not s.is_empty()
     assert not s.is_cons()
@@ -592,13 +592,13 @@ def test_sexp_string ():
     assert s.as_value().is_string()
     assert s.as_value().value() == 'Alice'
     # accents
-    s = lisp.SAtom(u'"Test\u00e9"')
+    s = lisp.SString(u'"Test\u00e9"')
     assert s.content() == u'"Test\u00e9"'
     assert s.as_value().value() == u'Test\u00e9'
 
     
 def test_sexp_integer ():
-    s = lisp.SAtom('42')
+    s = lisp.SInteger('42')
     assert s.is_atom()
     assert not s.is_empty()
     assert not s.is_cons()
@@ -608,14 +608,14 @@ def test_sexp_integer ():
 
     
 def test_sexp_boolean ():
-    s = lisp.SAtom('#t')
+    s = lisp.SBoolean('#t')
     assert s.is_atom()
     assert not s.is_empty()
     assert not s.is_cons()
     assert s.content() == '#t'
     assert s.as_value().is_boolean()
     assert s.as_value().value() == True
-    s = lisp.SAtom('#f')
+    s = lisp.SBoolean('#f')
     assert s.is_atom()
     assert s.content() == '#f'
     assert s.as_value().is_boolean()
@@ -632,7 +632,7 @@ def test_sexp_empty ():
     
     
 def test_sexp_cons ():
-    car = lisp.SAtom('42')
+    car = lisp.SInteger('42')
     cdr = lisp.SEmpty()
     s = lisp.SCons(car, cdr)
     assert not s.is_atom()
@@ -644,39 +644,6 @@ def test_sexp_cons ():
     assert s.as_value().car().value() == 42
     assert s.as_value().cdr().is_empty()
     
-    
-def text_sexp_from_value ():
-    v = lisp.VBoolean(True)
-    assert lisp.SExpression.from_value(v).is_atom()
-    assert lisp.SExpression.from_value(v).content() == '#T'
-    v = lisp.VBoolean(False)
-    assert lisp.SExpression.from_value(v).is_atom()
-    assert lisp.SExpression.from_value(v).content() == '#F'
-    v = lisp.VString('Alice')
-    assert lisp.SExpression.from_value(v).is_atom()
-    assert lisp.SExpression.from_value(v).content() == '"Alice"'
-    v = lisp.VString(u'Test\u00e9')
-    assert lisp.SExpression.from_value(v).is_atom()
-    assert lisp.SExpression.from_value(v).content() == u'"Test\u00e9"'
-    v = lisp.VInteger(42)
-    assert lisp.SExpression.from_value(v).is_atom()
-    assert lisp.SExpression.from_value(v).content() == '42'
-    v = lisp.VNil()
-    assert lisp.SExpression.from_value(v).is_atom()
-    assert lisp.SExpression.from_value(v).content() == 'NIL'
-    v = lisp.VSymbol('Alice')
-    assert lisp.SExpression.from_value(v).is_atom()
-    assert lisp.SExpression.from_value(v).content() == 'ALICE'
-    v = lisp.VSymbol('Test\u00e9')
-    assert lisp.SExpression.from_value(v).is_atom()
-    assert lisp.SExpression.from_value(v).content() == 'TEST\u00c9'
-    v = lisp.VEmpty()
-    assert lisp.SExpression.from_value(v).is_empty()
-    v = lisp.VCons(lisp.VInteger(42), lisp.VEmpty())
-    assert lisp.SExpression.from_value(v).is_cons()
-    assert lisp.SExpression.from_value(v).content()[0].is_number()
-    assert lisp.SExpression.from_value(v).content()[0].value() == 42
-    assert lisp.SExpression.from_value(v).content()[1].is_empty()
     
     # function? primitive? -- these might be unreadable!?
     
@@ -781,36 +748,36 @@ def test_exp_apply ():
 def test_exp_quote ():
     env = lisp.Environment()
     # symbol
-    s = lisp.SAtom('Alice')
+    s = lisp.SSymbol('Alice')
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_symbol() and v.value() == 'ALICE'
     # symobl (accents)
-    s = lisp.SAtom(u'Test\u00e9')
+    s = lisp.SSymbol(u'Test\u00e9')
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_symbol() and v.value() == u'TEST\u00c9'
     # string
-    s = lisp.SAtom('"Alice"')
+    s = lisp.SString('"Alice"')
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == 'Alice'
     # string (accents)
-    s = lisp.SAtom(u'"Test\u00e9"')
+    s = lisp.SString(u'"Test\u00e9"')
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_string() and v.value() == u'Test\u00e9'
     # integer
-    s = lisp.SAtom('42')
+    s = lisp.SInteger('42')
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # boolean
-    s = lisp.SAtom('#t')
+    s = lisp.SBoolean('#t')
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == True
-    s = lisp.SAtom('#f')
+    s = lisp.SBoolean('#f')
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == False
@@ -820,12 +787,12 @@ def test_exp_quote ():
     v = e.eval(_CONTEXT, env)
     assert v.is_empty()
     # cons
-    s = lisp.SCons(lisp.SAtom('42'), lisp.SEmpty())
+    s = lisp.SCons(lisp.SInteger('42'), lisp.SEmpty())
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_cons() and v.car().is_number() and v.car().value() == 42 and v.cdr().is_empty()
     # cons 2
-    s = lisp.SCons(lisp.SAtom('42'), lisp.SCons(lisp.SAtom('Alice'), lisp.SEmpty()))
+    s = lisp.SCons(lisp.SInteger('42'), lisp.SCons(lisp.SSymbol('Alice'), lisp.SEmpty()))
     e = lisp.Quote(s)
     v = e.eval(_CONTEXT, env)
     assert v.is_cons()
@@ -899,22 +866,22 @@ def test_exp_letrec ():
 def test_sexp_to_exp ():
     env = lisp.Environment(bindings=[('a', lisp.VInteger(42))])
     # symbol
-    s = lisp.SAtom('a')
+    s = lisp.SSymbol('a')
     v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # string
-    s = lisp.SAtom('"Alice"')
+    s = lisp.SString('"Alice"')
     v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_string() and v.value() == 'Alice'
     # integer
-    s = lisp.SAtom('42')
+    s = lisp.SInteger('42')
     v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_number() and v.value() == 42
     # boolean
-    s = lisp.SAtom('#t')
+    s = lisp.SBoolean('#t')
     v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == True
-    s = lisp.SAtom('#f')
+    s = lisp.SBoolean('#f')
     v = s.to_expression().eval(_CONTEXT, env)
     assert v.is_boolean() and v.value() == False
     

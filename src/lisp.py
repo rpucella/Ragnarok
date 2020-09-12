@@ -285,7 +285,7 @@ class VDict (Value):
         return self._value
 
     def is_equal (self, v):
-        # TODO - fix this comparions!
+        # TODO - fix this comparison!
         return v.is_dict() and self.value().is_equal(v.value())
 
     def lookup (self, v):
