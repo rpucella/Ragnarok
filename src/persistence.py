@@ -63,9 +63,9 @@ def create_entry (module, name, source):
         fp.write(source + '\n')
 
         
-def load_module (module, engine):
+def load_module (module, engine, root):
     uids = get_uids(module)
-    env = Environment()
+    env = Environment(previous=root)
     context = {
         # we may need more...
         'env': env,
@@ -73,12 +73,12 @@ def load_module (module, engine):
     }
     for uid in uids:
         filename = f's{uid}.rg'
-        print(f'Loading {filename}...')
+        ##print(f'Loading {filename}...')
         with open(os.path.join(_PATH, filename), 'rt') as fp:
             src = fp.read()
-        print(src)
+        ##print(src)
         s = engine.read(src, strict=True)
-        print(s)
+        ##print(s)
         engine.eval_sexp(context, s)
     return env
 

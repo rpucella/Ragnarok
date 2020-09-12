@@ -12,7 +12,7 @@ class Engine (object):
         self._root = Environment()
         # core
         if persist:
-            core = persistence.load_module('CORE', self)
+            core = persistence.load_module('CORE', self, self._root)
         else:
             prims = PRIMITIVES.items()
             core = Environment(bindings=prims, previous=self._root)
