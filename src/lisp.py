@@ -276,7 +276,7 @@ class VDict (Value):
 
     def __str__ (self):
         entries = ['({})'.format(' '.join([ str(x) for x in v])) for v in self._value]
-        return '#<DICT {}>'.format(' '.join(entries))
+        return '#DICT({})'.format(' '.join(entries))
 
     def type (self):
         return 'dict'
@@ -457,7 +457,7 @@ class VPrimitive (Value):
 
     def __str__ (self):
         h = id(self)
-        return '#<PRIMITIVE {}>'.format(hex(h))
+        return f'#PRIM({self._name})'
 
     def type (self):
         return 'primitive'
@@ -791,8 +791,8 @@ class SAtom (SExpression):
     def content (self):
         return self._content
 
-    def __repr__ (self):
-        return ('SAtom({})'.format(self._content))
+    # def __repr__ (self):
+    #     return ('SAtom({})'.format(self._content))
 
     def __str__ (self):
         return str(self._content)
@@ -808,32 +808,32 @@ class SAtom (SExpression):
             return m.group()
         return None
 
-    def as_value (self):
-        content = self._content
-        if content[0] == '"' and content[-1] == '"':
-            return VString(content[1:-1])
-        if self.match_token(r'-?[0-9]+'):
-            return VInteger(int(content))
-        if self.match_token(r'#t'):
-            return VBoolean(True)
-        if self.match_token(r'#f'):
-            return VBoolean(False)
-        return VSymbol(content)
+    # def as_value (self):
+    #     content = self._content
+    #     if content[0] == '"' and content[-1] == '"':
+    #         return VString(content[1:-1])
+    #     if self.match_token(r'-?[0-9]+'):
+    #         return VInteger(int(content))
+    #     if self.match_token(r'#t'):
+    #         return VBoolean(True)
+    #     if self.match_token(r'#f'):
+    #         return VBoolean(False)
+    #     return VSymbol(content)
 
-    def to_expression (self): 
-        content = self._content
-        if content[0] == '"' and content[-1] == '"':
-            return String(content[1:-1])
-        if self.match_token(r'-?[0-9]+'):
-            return Integer(int(content))
-        if self.match_token(r'#t'):
-            return Boolean(True)
-        if self.match_token(r'#f'):
-            return Boolean(False)
-        if ':' in content:
-            subsymbols = content.split(':')
-            return Symbol(subsymbols[-1], qualifiers=subsymbols[:-1])
-        return Symbol(content)
+    # def to_expression (self): 
+    #     content = self._content
+    #     if content[0] == '"' and content[-1] == '"':
+    #         return String(content[1:-1])
+    #     if self.match_token(r'-?[0-9]+'):
+    #         return Integer(int(content))
+    #     if self.match_token(r'#t'):
+    #         return Boolean(True)
+    #     if self.match_token(r'#f'):
+    #         return Boolean(False)
+    #     if ':' in content:
+    #         subsymbols = content.split(':')
+    #         return Symbol(subsymbols[-1], qualifiers=subsymbols[:-1])
+    #     return Symbol(content)
 
 
 class SInteger (SAtom):
@@ -847,7 +847,34 @@ class SInteger (SAtom):
     def to_expression (self): 
         return Integer(int(self._content))
 
+    
+class SPrimitive (SAtom):
+    
+    def __repr__ (self):
+        return ('SPrimitive({})'.format(self._content))
 
+    def as_value (self):
+        name = self._content[6:-1].upper()
+        if name not in PRIMITIVES:
+            raise LispError(f'No such primitive {name}')
+        return PRIMITIVES[name]
+
+    def to_expression (self): 
+        return Literal(self.as_value())
+
+    
+class SDict (SAtom):
+    
+    def __repr__ (self):
+        return ('SDict({})'.format(self._content))
+
+    def as_value (self):
+        return VDict([(x.as_value(), y.as_value()) for (x,y) in self._content])
+
+    def to_expression (self): 
+        return Literal(self.as_value())
+
+    
 class SBoolean (SAtom):
     
     def __repr__ (self):
@@ -979,7 +1006,7 @@ def parse_rparen (s):
 def parse_dot (s):
     return parse_token(r'\.')(s)
 
-def parse_atom (s):
+def parse_symbol (s):
     p = parse_token(r"[^'()#\s]+")
     return parse_sexp_wrap(p, lambda x: SSymbol(x))(s)
 
@@ -998,11 +1025,32 @@ def parse_boolean (s):
     p = parse_token(r'#(?:t|f|T|F)')
     return parse_sexp_wrap(p, lambda x: SBoolean(x))(s)
 
-def parse_sexp (s):
+def parse_primitive (s):
+    p = parse_token(r'#prim\([^)]+\)')
+    return parse_sexp_wrap(p, lambda x: SPrimitive(x))(s)
+
+def parse_dict (s):
+    p = parse_sexp_wrap(parse_seq([parse_token(r'#dict\('),
+                                   parse_rep(parse_sexp_wrap(parse_seq([parse_lparen,
+                                                                        parse_sexp,
+                                                                        parse_sexp,
+                                                                        parse_rparen]),
+                                                             lambda x: (x[1], x[2]))),
+                                   parse_rparen]),
+                        lambda x: SDict(x[1]))
+    return p(s)
+
+def parse_atom (s):
     p = parse_first([parse_string,
                      parse_integer,
                      parse_boolean,
-                     parse_atom,
+                     parse_primitive,
+                     parse_dict,
+                     parse_symbol])
+    return p(s)
+    
+def parse_sexp (s):
+    p = parse_first([parse_atom,
                      parse_sexp_wrap(parse_seq([parse_token(r"'"),
                                                 parse_sexp]),
                                 lambda x: SCons(SSymbol('quote'), SCons(x[1], SEmpty()))),
@@ -1015,8 +1063,8 @@ def parse_sexp (s):
     
 def parse_sexps (s):
     p = parse_first([parse_sexp_wrap(parse_seq([parse_sexp,
-                                           parse_sexps]),
-                                lambda x: SCons(x[0], x[1])),
+                                                parse_sexps]),
+                                     lambda x: SCons(x[0], x[1])),
                      parse_success(SEmpty())])
     return p(s)
 
@@ -1048,6 +1096,24 @@ def parse_seq (ps):
                 return None
             acc_result.append(result[0])
             current = result[1]
+        return (acc_result, current)
+
+    return parser
+
+
+def parse_rep (p):
+
+    def parser (s):
+        acc_result = []
+        current = s
+        done = False
+        while not done:
+            result = p(current)
+            if result is None:
+                done = True
+            else:
+                acc_result.append(result[0])
+                current = result[1]
         return (acc_result, current)
 
     return parser
