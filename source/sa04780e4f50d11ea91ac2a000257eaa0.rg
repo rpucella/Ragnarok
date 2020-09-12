@@ -1,0 +1,1 @@
+(const DICT-GET #PRIM(DICT-GET))

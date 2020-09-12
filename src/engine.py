@@ -1,23 +1,27 @@
 from .lisp import *
 from .interactive import INTERACTIVE
+from src import persistence
 
 ############################################################
 
 
 class Engine (object):
     
-    def __init__ (self):
+    def __init__ (self, persist=False):
+        self._parser = Parser()
         self._root = Environment()
         # core
-        prims = PRIMITIVES.items()
-        core = Environment(bindings=prims, previous=self._root)
-        core.add('empty', VEmpty())
-        core.add('nil', VNil())
+        if persist:
+            core = persistence.load_module('CORE', self)
+        else:
+            prims = PRIMITIVES.items()
+            core = Environment(bindings=prims, previous=self._root)
+            core.add('empty', VEmpty())
+            core.add('nil', VNil())
         self._root.add('core', VModule(core))
         # interactive
         interactive = Environment(previous=self._root, bindings=INTERACTIVE)
         self._root.add('interactive', VModule(interactive))
-        self._parser = Parser()
 
     def read (self, s, strict=True):
         if not s.strip():

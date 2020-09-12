@@ -1,0 +1,1 @@
+(const DICT-SET! #PRIM(DICT-SET!))

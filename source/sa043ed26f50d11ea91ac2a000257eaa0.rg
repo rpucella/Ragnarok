@@ -1,0 +1,1 @@
+(const FUNCTION? #PRIM(FUNCTION?))

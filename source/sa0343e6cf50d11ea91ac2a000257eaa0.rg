@@ -1,0 +1,1 @@
+(const NOT #PRIM(NOT))

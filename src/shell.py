@@ -142,5 +142,8 @@ class Shell:
         
 
 if __name__ == '__main__':
-    e = Engine()
+    persist = False
+    if len(sys.argv) > 1 and sys.argv[1] == '--persist':
+        persist = True
+    e = Engine(persist=persist)
     Shell(e).repl()

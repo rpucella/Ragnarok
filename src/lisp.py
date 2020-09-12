@@ -1038,7 +1038,7 @@ def parse_boolean (s):
     return parse_sexp_wrap(p, lambda x: SBoolean(x))(s)
 
 def parse_primitive (s):
-    p = parse_token(r'#prim\([^)]+\)')
+    p = parse_token(r'#(?:(?:prim)|(?:PRIM))\([^)]+\)')
     return parse_sexp_wrap(p, lambda x: SPrimitive(x))(s)
 
 def parse_nil (s):
@@ -1302,7 +1302,7 @@ class Parser (object):
         
     def parse_identifier (self, s):
 
-        char = r'A-Za-z-+/*_.?!@$'
+        char = r'A-Za-z-+/*_.?!@$<>='
         identifier = '[{c}0-9]*[{c}#][{c}#0-9]*'.format(c=char)
 
         if not s:
