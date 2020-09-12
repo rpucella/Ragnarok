@@ -851,7 +851,7 @@ class SInteger (SAtom):
 class SPrimitive (SAtom):
     
     def __repr__ (self):
-        return ('SPrimitive({})'.format(self._content))
+        return f'SPrimitive({self._content})'
 
     def as_value (self):
         name = self._content[6:-1].upper()
@@ -863,10 +863,22 @@ class SPrimitive (SAtom):
         return Literal(self.as_value())
 
     
+class SNil (SAtom):
+
+    def __repr__ (self):
+        return 'SNil()'
+
+    def as_value (self):
+        return VNil()
+
+    def to_expression (self): 
+        return Literal(VNil())
+
+    
 class SDict (SAtom):
     
     def __repr__ (self):
-        return ('SDict({})'.format(self._content))
+        return f'SDict({self._content})'
 
     def as_value (self):
         return VDict([(x.as_value(), y.as_value()) for (x,y) in self._content])
@@ -878,7 +890,7 @@ class SDict (SAtom):
 class SBoolean (SAtom):
     
     def __repr__ (self):
-        return ('SBoolean({})'.format(self._content))
+        return f'SBoolean({self._content})'
 
     def as_value (self):
         if self._content.upper() == '#T':
@@ -896,7 +908,7 @@ class SBoolean (SAtom):
 class SString (SAtom):
     
     def __repr__ (self):
-        return ('SString({})'.format(self._content))
+        return f'SString({self._content})'
 
     def as_value (self):
         return VString(self._content[1:-1])
@@ -908,7 +920,7 @@ class SString (SAtom):
 class SSymbol (SAtom):
 
     def __repr__ (self):
-        return ('SSymbol({})'.format(self._content))
+        return f'SSymbol({self._content})'
 
     def as_value (self):
         return VSymbol(self._content)
@@ -1029,6 +1041,10 @@ def parse_primitive (s):
     p = parse_token(r'#prim\([^)]+\)')
     return parse_sexp_wrap(p, lambda x: SPrimitive(x))(s)
 
+def parse_nil (s):
+    p = parse_token(r'#nil')
+    return parse_sexp_wrap(p, lambda x: SNil(None))(s)
+
 def parse_dict (s):
     p = parse_sexp_wrap(parse_seq([parse_token(r'#dict\('),
                                    parse_rep(parse_sexp_wrap(parse_seq([parse_lparen,
@@ -1045,6 +1061,7 @@ def parse_atom (s):
                      parse_integer,
                      parse_boolean,
                      parse_primitive,
+                     parse_nil,
                      parse_dict,
                      parse_symbol])
     return p(s)
