@@ -575,7 +575,18 @@ class Expression (object):
                 return new_exp
             curr_exp = new_exp
             curr_env = new_env
-    
+
+
+class Literal (Expression):
+    def __init__ (self, value):
+        self._value = value
+
+    def __repr__ (self):
+        return f'Literal({repr(self._value)})'
+
+    def eval (self, ctxt, env):
+        return self._value
+            
     
 class Symbol (Expression):
     def __init__ (self, sym, qualifiers=[]):
@@ -757,21 +768,20 @@ class SExpression (object):
     def is_empty (self):
         return False
 
-#    def __str__ (self):
-#        return str(self)
-
-    @staticmethod
-    def from_value (v):
-        if v.is_atom():
-            return SAtom(str(v))
-        if v.is_empty():
-            return SEmpty()
-        if v.is_cons():
-            return SCons(SExpression.from_value(v.car()), SExpression.from_value(v.cdr()))
-        raise LispError('Cannot convert {} back to s-expression'.format(repr(v)))
+    # @staticmethod
+    # def from_value (v):
+    #     if v.is_atom():
+    #         return SAtom(str(v))
+    #     if v.is_empty():
+    #         return SEmpty()
+    #     if v.is_cons():
+    #         return SCons(SExpression.from_value(v.car()), SExpression.from_value(v.cdr()))
+    #     raise LispError('Cannot convert {} back to s-expression'.format(repr(v)))
     
     
 class SAtom (SExpression):
+    # probably need to split this into component atoms: String, Symbol, Integer, Boolean, etc
+    
     def __init__ (self, s):
         self._content = s
 
@@ -824,7 +834,64 @@ class SAtom (SExpression):
             subsymbols = content.split(':')
             return Symbol(subsymbols[-1], qualifiers=subsymbols[:-1])
         return Symbol(content)
-   
+
+
+class SInteger (SAtom):
+    
+    def __repr__ (self):
+        return ('SInteger({})'.format(self._content))
+
+    def as_value (self):
+        return VInteger(int(self._content))
+
+    def to_expression (self): 
+        return Integer(int(self._content))
+
+
+class SBoolean (SAtom):
+    
+    def __repr__ (self):
+        return ('SBoolean({})'.format(self._content))
+
+    def as_value (self):
+        if self._content.upper() == '#T':
+            return VBoolean(True)
+        if self._content.upper() == '#F':
+            return VBoolean(False)
+
+    def to_expression (self): 
+        if self._content.upper() == '#T':
+            return Boolean(True)
+        if self._content.upper() == '#F':
+            return Boolean(False)
+
+
+class SString (SAtom):
+    
+    def __repr__ (self):
+        return ('SString({})'.format(self._content))
+
+    def as_value (self):
+        return VString(self._content[1:-1])
+
+    def to_expression (self): 
+        return String(self._content[1:-1])
+
+
+class SSymbol (SAtom):
+
+    def __repr__ (self):
+        return ('SSymbol({})'.format(self._content))
+
+    def as_value (self):
+        return VSymbol(self._content)
+
+    def to_expression (self): 
+        if ':' in self._content:
+            subsymbols = self._content.split(':')
+            return Symbol(subsymbols[-1], qualifiers=subsymbols[:-1])
+        return Symbol(self._content)
+    
     
 class SCons (SExpression):
     def __init__ (self, car, cdr):
@@ -914,26 +981,31 @@ def parse_dot (s):
 
 def parse_atom (s):
     p = parse_token(r"[^'()#\s]+")
-    return parse_sexp_wrap(p, lambda x: SAtom(x))(s)
+    return parse_sexp_wrap(p, lambda x: SSymbol(x))(s)
+
+def parse_integer (s):
+    p = parse_token(r"-?[0-9]+")
+    return parse_sexp_wrap(p, lambda x: SInteger(x))(s)
 
 def parse_string (s):
     def clean (s):
         return s.replace('\\"', '"').replace('\\\\', '\\')
     # p = parse_token(r'"[^"]*"')
     p = parse_token(r'"(?:[^"\\]|\\.)*"')
-    return parse_sexp_wrap(p, lambda x: SAtom(x))(s)
+    return parse_sexp_wrap(p, lambda x: SString(x))(s)
 
 def parse_boolean (s):
     p = parse_token(r'#(?:t|f|T|F)')
-    return parse_sexp_wrap(p, lambda x: SAtom(x))(s)
+    return parse_sexp_wrap(p, lambda x: SBoolean(x))(s)
 
 def parse_sexp (s):
     p = parse_first([parse_string,
-                     parse_atom,
+                     parse_integer,
                      parse_boolean,
+                     parse_atom,
                      parse_sexp_wrap(parse_seq([parse_token(r"'"),
                                                 parse_sexp]),
-                                lambda x: SCons(SAtom('quote'), SCons(x[1], SEmpty()))),
+                                lambda x: SCons(SSymbol('quote'), SCons(x[1], SEmpty()))),
                                           ##parse_sexp_string,
                      parse_sexp_wrap(parse_seq([parse_lparen,
                                            parse_sexps,
