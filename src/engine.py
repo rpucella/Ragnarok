@@ -9,7 +9,8 @@ class Engine (object):
     def __init__ (self):
         self._root = Environment()
         # core
-        core = Environment(bindings=PRIMITIVES, previous=self._root)
+        prims = PRIMITIVES.items()
+        core = Environment(bindings=prims, previous=self._root)
         core.add('empty', VEmpty())
         core.add('nil', VNil())
         self._root.add('core', VModule(core))

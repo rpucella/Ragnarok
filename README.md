@@ -44,7 +44,9 @@ with `pipenv run lint`, and run the unit tests in `tests/` with
 
 ## The language
 
-Ragnarok is a dialect of [Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)). Whya new dialect as opposed to either Common Lisp or Scheme? Good question. It may circle back to being Scheme-compatible. 
+Ragnarok is a dialect of [Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)). Whya new dialect as opposed to either Common Lisp or Scheme? Good question. It may circle back to being Scheme-compatible.
+
+Links of interest include Scheme's [R5RS standard](https://schemers.org/Documents/Standards/R5RS/r5rs.pdf) and Paul Graham's [BEL](http://paulgraham.com/bel.html)
 
 
 ### Values
@@ -54,9 +56,12 @@ Primitive values include integers such as `42` or `-1`, booleans such as `#t` an
 
 ### Declarations
 
-**(`def` _name_ _expression_)** : Define a constant _name_ with value the result of evaluating _expression_.
-
 **(`def` (_name_ _arg_ ...) _body_)** : Define a function _name_ with parameters _arg_, ... with expression _body_ as a body.
+
+**(`const` _name_ _expression_)** : Define a constant _name_ with value the result of evaluating _expression_. Constants are immutable during execution,
+
+**(`var` _name_ _expression_)** : Define a variable _name_ with value the result of evaluating _expression_. Variables are mutable during execution. 
+
 
 
 ### Special forms

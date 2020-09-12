@@ -1373,7 +1373,7 @@ class Parser (object):
         return LetRec([(name, Lambda(params, body))], Symbol(name))
 
 
-PRIMITIVES = []
+PRIMITIVES = {}
 
 def check_arg_type (name, v, pred):
     if not pred(v):
@@ -1382,7 +1382,9 @@ def check_arg_type (name, v, pred):
 def primitive(name, min, max=None):
     name = name.upper()
     def decorator(func):
-        PRIMITIVES.append((name, VPrimitive(name, func, min, max)))
+        if name in PRIMITIVES:
+            raise Exception(f'Primitive {name} already defined')
+        PRIMITIVES[name] = VPrimitive(name, func, min, max)
         return func
     return decorator
 
@@ -1390,7 +1392,6 @@ def primitive(name, min, max=None):
 @primitive('type', 1, 1)
 def prim_type (ctxt, args):
     return VSymbol(args[0].type())
-
 
 @primitive('+', 0)
 def prim_plus (ctxt, args):
