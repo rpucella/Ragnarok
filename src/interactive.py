@@ -4,22 +4,13 @@ import os
 
 from .lisp import *
 
-INTERACTIVE = []
 
-def int_primitive(name, min, max=None):
-    name = name.upper()
-    def decorator(func):
-        INTERACTIVE.append((name, VPrimitive(name, func, min, max)))
-        return func
-    return decorator
-
-
-@int_primitive('quit', 0, 0)
+@primitive('quit', 0, 0)
 def prim_quit (ctxt, args):
     raise LispQuit
 
 
-@int_primitive('env', 0, 1)
+@primitive('env', 0, 1)
 def prim_env (ctxt, args):
     def show_env (env):
         all_bindings = env.bindings()
@@ -42,7 +33,7 @@ def prim_env (ctxt, args):
     return VNil()
 
 
-@int_primitive('module', 0, 1)
+@primitive('module', 0, 1)
 def prim_module (ctxt, args):
     if len(args) > 0:
         check_arg_type('module', args[0], lambda v:v.is_symbol())
@@ -59,7 +50,7 @@ def prim_module (ctxt, args):
     return VNil()
 
 
-@int_primitive('load', 1, 1)
+@primitive('load', 1, 1)
 def prim_load (ctxt, args):
     check_arg_type('load', args[0], lambda v:v.is_string())
     filename = args[0].value()
@@ -69,7 +60,7 @@ def prim_load (ctxt, args):
     return VNil()
 
 
-@int_primitive('new-function', 1, 1)
+@primitive('new-function', 1, 1)
 def prim_define (ctxt, args):
     check_arg_type('define', args[0], lambda v:v.is_symbol())
     # what if it's qualified?
@@ -94,7 +85,7 @@ def prim_define (ctxt, args):
 
 
 
-@int_primitive('new-constant', 1, 1)
+@primitive('new-constant', 1, 1)
 def prim_const (ctxt, args):
     check_arg_type('define', args[0], lambda v:v.is_symbol())
     # what if it's qualified?
@@ -118,7 +109,7 @@ def prim_const (ctxt, args):
     return VNil()
 
 
-@int_primitive('show-source', 1, 1)
+@primitive('show-source', 1, 1)
 def prim_show_source (ctxt, args):
     def show_env (env):
         all_bindings = env.bindings()

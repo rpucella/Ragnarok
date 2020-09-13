@@ -1,27 +1,29 @@
 import re
 from .lisp import *
-from .interactive import INTERACTIVE
-from src import persistence
+from src import persistence, interactive
 
-############################################################
 
+_VERSION = '0.0.1'
 
 class Engine (object):
     
-    def __init__ (self, persist=False):
+    def __init__ (self, persist=True):
+        print(f';; Ragnarok engine {_VERSION}')
         self._parser = Parser()
         self._root = Environment()
         # core
         if persist:
             core = persistence.load_module('CORE', self, self._root)
+            interactive = persistence.load_module('INTERACTIVE', self, self._root)
         else:
+            # obsolete, but kept for giggles
             prims = PRIMITIVES.items()
             core = Environment(bindings=prims, previous=self._root)
             core.add('empty', VEmpty())
             core.add('nil', VNil())
+            # # interactive
+            interactive = Environment(previous=self._root)
         self._root.add('core', VModule(core))
-        # interactive
-        interactive = Environment(previous=self._root, bindings=INTERACTIVE)
         self._root.add('interactive', VModule(interactive))
 
     def read (self, s, strict=True):
@@ -71,9 +73,9 @@ class Engine (object):
             return { 'result': result.eval(ctxt, env) }
         raise LispError('Cannot recognize top level type {}'.format(type))
         
-    def eval_sexp (self, ctxt, sexp):
+    def eval_sexp (self, ctxt, sexp, source=None):
         (type, result) = self._parser.parse(sexp)
-        return self.eval_parsed_sexp(ctxt, type, result)
+        return self.eval_parsed_sexp(ctxt, type, result, source=source)
            
     def root (self):
         return self._root

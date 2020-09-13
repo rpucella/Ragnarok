@@ -114,7 +114,7 @@ class Shell:
             self.emit(str(v))
             
     def repl (self, on_error=None):
-        self.emit(';; Ragnarok CLI shell')
+        self.emit(';; Ragnarok interactive shell')
         done = False
         while not done:
             try:
@@ -142,8 +142,5 @@ class Shell:
         
 
 if __name__ == '__main__':
-    persist = False
-    if len(sys.argv) > 1 and sys.argv[1] == '--persist':
-        persist = True
-    e = Engine(persist=persist)
+    e = Engine()
     Shell(e).repl()

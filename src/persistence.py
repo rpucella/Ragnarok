@@ -64,6 +64,7 @@ def create_entry (module, name, source):
 
         
 def load_module (module, engine, root):
+    # TODO: move mostly to engine, leave read_source(uuid) in persistence
     uids = get_uids(module)
     env = Environment(previous=root)
     context = {
@@ -71,15 +72,16 @@ def load_module (module, engine, root):
         'env': env,
         'def_env': env
     }
+    print(f';; Loading module {module} - ', end='')
     for uid in uids:
         filename = f's{uid}.rg'
-        ##print(f'Loading {filename}...')
         with open(os.path.join(_PATH, filename), 'rt') as fp:
             src = fp.read()
         ##print(src)
         s = engine.read(src, strict=True)
         ##print(s)
-        engine.eval_sexp(context, s)
+        engine.eval_sexp(context, s, source=src)
+    print(len(uids))
     return env
 
     
