@@ -296,12 +296,15 @@ class VDict (Value):
 
     def update (self, k, v):
         result = []
+        found = False
         for (key, value) in self._value:
             if key.is_equal(k):
                 result.append((key, v))
+                found = True
             else:
                 result.append((key, value))
-        else:
+        if not found:
+            # we haven't updated the key, so append
             result.append((k, v))
         return VDict(result)
 
@@ -309,6 +312,7 @@ class VDict (Value):
         for (i, (key, value)) in enumerate(self._value):
             if key.is_equal(k):
                 self._value[i] = (key, v)
+                break
         else:
             self._value.append((k,v))
         return VNil()
@@ -1865,10 +1869,10 @@ def prim_dict_update (ctxt, args):
     check_arg_type('dict-update', args[1], lambda v:v.is_atom())
     return args[0].update(args[1], args[2])
 
-@primitive('dict-set!', 3, 3)
+@primitive('dict-set', 3, 3)
 def prim_dict_set (ctxt, args):
-    check_arg_type('dict-set!', args[0], lambda v:v.is_dict())
-    check_arg_type('dict-set!', args[1], lambda v:v.is_atom())
+    check_arg_type('dict-set', args[0], lambda v:v.is_dict())
+    check_arg_type('dict-set', args[1], lambda v:v.is_atom())
     return args[0].set(args[1], args[2])
 
 

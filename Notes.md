@@ -58,7 +58,7 @@ There is a special module called `keyword`. Symbols in the `keyword` module eval
     (make-vector n f)
     (vector-length ...)
     (vector-get ...)
-    (vector-put ...)
+    (vector-set ...)
 
 Helpful:
 
@@ -72,7 +72,7 @@ Helpful:
     (def (vector . items)
       (let ((vec (make-vector (length items) (fn (_) nil))))
         (do (for-each-iter items 
-              (fn (x index) (vector-put vec index x)))
+              (fn (x index) (vector-set vec index x)))
             vec)))
 
 Converting a vector to a list:
@@ -125,10 +125,19 @@ There's no easy way to reverse a vector:
 
     (def (name ...) ...)
     (const name ...)
-    (var name ...)
     (macro (name ...) ...)
     
     (class name ...)    
+    
+We don't need `var`, since we can define `(const a (ref 10))`, though we could define:
+
+     (macro (var name value)
+       `(const ,name (ref ,value)))
+       
+Note that it means that everything is immutable in the environment
+
+     (macro (set! name v)
+       `(ref-set ,name ,v))
 
 Also: 
 
@@ -198,4 +207,54 @@ Note that `chain` must be a macro:
       (if apps
         `(,(first (first apps)) (chain ,init ,@(rest apps)) ,@(rest (first apps)))
         init))
-        
+
+
+## Classes and objects
+
+    (class point (ix iy)
+      (field x ix)      ;; = (const x (ref ix))
+      (field y iy)      ;; = (const y (ref iy))
+      (def (move dx dy)
+        (do
+          (field-set this x (+ (field-get this x) dx))
+          (field-set this y (+ (field-get this y) dy))))
+      (def (distance)
+        (sqrt (+ (square (field-get this x)) (square (field-get this y))))))
+
+Note that a ref cell is really a one-element vector. ANYWAY.
+
+To create an instance:
+
+    (const pt (point 10 20))
+    
+To access a method, use
+
+    (move pt 5 -5)
+    
+To access a field, use
+
+    (field-get pt x)
+    
+To update a field, use
+
+    (field-set pt x v)
+    
+Core functions:
+
+    (lookup-field obj 'name)
+    (lookup-method obj 'name)
+    
+So that
+
+    (macro (field-get obj name)
+      `(ref-get (lookup-field ,obj (quote ,name))))
+      
+    (macro (field-set obj name val)
+      `(ref-set (lookup-field ,obj (quote ,name) ,val)))
+      
+For methods, it's part of the application evaluation - 
+
+    (f-exp arg1-exp arg2-exp ...)
+    
+First evaluate `arg1-exp` to a value `v` - if `v` is an object and `f-exp` is a symbol, check if `v` has a method called `f-exp`, and if so, lookup the method, finish evaluating arguments, and apply the method to the arguments (passing `v` as `this`). Otherwise, evaluate `f-exp` using the normal evaluation rules.
+
