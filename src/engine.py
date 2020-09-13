@@ -1,3 +1,4 @@
+import re
 from .lisp import *
 from .interactive import INTERACTIVE
 from src import persistence
@@ -24,9 +25,10 @@ class Engine (object):
         self._root.add('interactive', VModule(interactive))
 
     def read (self, s, strict=True):
-        if not s.strip():
+        ss = re.sub(r';[^\n]*', '', s)   # remove comments
+        if not ss.strip():
             return None
-        result = parse_sexp(s)
+        result = parse_sexp(ss)
         if result:
             if strict and result[1].strip():
                 raise LispReadError('Input past end of expression: {}'.format(result[1]))
@@ -36,7 +38,7 @@ class Engine (object):
             else:
                 # otherwise, return the result and the rest of the input
                 return result
-        raise LispReadError('Cannot read {}'.format(s))
+        raise LispReadError('Cannot read {}'.format(ss))
         
     def eval (self, ctxt, s):
         sexp = self.read(s)
