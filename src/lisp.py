@@ -8,15 +8,16 @@ import functools
 _KW_DEF = 'def'
 _KW_CONST = 'const'
 _KW_VAR = 'var'
+_KW_MACRO = 'macro'
 _KW_LET = 'let'
+_KW_LETS = 'let*'
 _KW_LETREC = 'letrec'
 _KW_LOOP = 'let'
 _KW_IF = 'if'
-_KW_FUN = 'fun'
-_KW_FUNREC = 'funrec'
+_KW_FUN = 'fn'
+_KW_FUNREC = 'fnrec'
 _KW_DO = 'do'
 _KW_QUOTE = 'quote'
-_KW_LETS = 'let*'
 _KW_DICT = 'dict'
 _KW_AND = 'and'
 _KW_OR = 'or'
@@ -153,6 +154,9 @@ class Value (object):
     def to_list (self):
         raise LispError('Cannot convert to a python list of values: {}'.format(self))
 
+    def to_sexp (self):
+        raise LispError('Cannot convert to an s-expression: {}'.format(self))
+
     def _str_cdr (self):
         raise LispError('Cannot use value as list terminator: {}'.format(self))
 
@@ -243,6 +247,9 @@ class VBoolean (Value):
     def is_eq (self, v):
         return v.is_boolean() and self.value() == v.value()
 
+    def to_sexp (self):
+        return SBoolean(str(self))
+    
 
 class VReference (Value):
     def __init__ (self, v):
@@ -316,7 +323,10 @@ class VDict (Value):
         else:
             self._value.append((k,v))
         return VNil()
-    
+
+    def to_sexp (self):
+        return SDict(str(self))
+
     
 class VString (Value):
     def __init__ (self, s):
@@ -343,6 +353,9 @@ class VString (Value):
     def is_equal (self, v):
         return v.is_string() and self.value() == v.value()
     
+    def to_sexp (self):
+        return SString(str(self))
+
     
 class VInteger (Value):
     def __init__ (self, v):
@@ -366,6 +379,9 @@ class VInteger (Value):
     def is_eq (self, v):
         return v.is_number() and self.value() == v.value()
 
+    def to_sexp (self):
+        return SInteger(str(self))
+    
 
 class VNil (Value):
     def __repr__ (self):
@@ -386,6 +402,9 @@ class VNil (Value):
     def is_eq (self, v):
         return v.is_nil()
 
+    def to_sexp (self):
+        return SNil('nil')
+    
 
 class VEmpty (Value):
     def __repr__ (self):
@@ -412,6 +431,9 @@ class VEmpty (Value):
     def is_eq (self, v):
         return v.is_empty()
 
+    def to_sexp (self):
+        return SEmpty()
+    
     
 class VCons (Value):
     def __init__ (self, car, cdr):
@@ -447,7 +469,10 @@ class VCons (Value):
 
     def is_equal (self, v):
         return v.is_cons() and self.car().is_equal(v.car()) and self.cdr().is_equal(v.cdr())
-    
+
+    def to_sexp (self):
+        return SCons(self._car.to_sexp(),
+                     self._cdr.to_sexp())
 
 class VPrimitive (Value):
     def __init__ (self, name, primitive, min, max=None):
@@ -477,6 +502,9 @@ class VPrimitive (Value):
         result = self._primitive(ctxt, values)
         return (result or VNil())
     
+    def to_sexp (self):
+        return SPrimitive(str(self))
+
     
 class VSymbol (Value):
     def __init__ (self, sym):
@@ -498,6 +526,9 @@ class VSymbol (Value):
     def is_eq (self, v):
         return v.is_symbol() and self.value() == v.value()
     
+    def to_sexp (self):
+        return SSymbol(str(self))
+
     
 class VFunction (Value):
     def __init__ (self, params, body, env):
@@ -551,8 +582,8 @@ class VModule (Value):
     def is_true (self):
         return True
 
-    
-    
+
+############################################################
 
 class Expression (object):
 
@@ -774,7 +805,10 @@ class SExpression (object):
 
     # @staticmethod
     # def from_value (v):
-    #     if v.is_atom():
+    #     if v.is_integer():
+    #         return SInteger(str(v))
+    #     if v.is_primitive():
+    #         return SPrimitive(str(v))
     #         return SAtom(str(v))
     #     if v.is_empty():
     #         return SEmpty()
@@ -1154,15 +1188,25 @@ def parse_first (ps):
 
 class Parser (object):
     def __init__ (self):
+        # TODO: generalize to have multiple modules of macros
         self._macros = {}
         self._gensym_count = 0
+        self._context = None
+
+    # def set_environment (self, env):
+    #     self._env = env
+        
+    def add_macro (self, name, macro):
+        # TODO: get the module as well
+        self._macros[name] = macro
 
     def gensym (self, prefix='gsym'):
         c = self._gensym_count
         self._gensym_count += 1
         return ' __{}_{}'.format(prefix, c)
 
-    def parse (self, sexp):
+    def parse (self, ctxt, sexp):
+        self._context = ctxt
         result = self.parse_var(sexp)
         if result:
             return ('var', result)
@@ -1172,6 +1216,9 @@ class Parser (object):
         result = self.parse_const(sexp)
         if result:
             return ('const', result)
+        result = self.parse_macro(sexp)
+        if result:
+            return ('macro', result)
         result = self.parse_exp(sexp)
         if result:
             return ('exp', result)
@@ -1183,7 +1230,6 @@ class Parser (object):
         if s.is_atom():
             return s.to_expression()
         return None
-
 
     def parse_empty (self, s):
         return [] if s.is_empty() else None
@@ -1326,6 +1372,7 @@ class Parser (object):
                          self.parse_do,
                          self.parse_letrec,
                          self.parse_builtin_macros,
+                         self.parse_defined_macros,
                          self.parse_apply])
         return p(s)
 
@@ -1413,11 +1460,40 @@ class Parser (object):
         p = parse_wrap(p, lambda x:(x[0][1][0][0], x[0][1][1], Do(x[1])))
         return p(s)
 
+    
+    def parse_macro (self, s):
+        p = self.parse_list([self.parse_keyword(_KW_MACRO),
+                              self.parse_list([self.parse_identifier],
+                                              tail=self.parse_rep(self.parse_identifier))],
+                             tail=self.parse_exps)
+        p = parse_wrap(p, lambda x:(x[0][1][0][0], x[0][1][1], Do(x[1])))
+        return p(s)
+
 
     ############################################################
     #
     # Built-in macros
     #
+
+    def parse_defined_macros (self, s):
+        def expand (result):
+            if result[0][0] in self._macros:
+                print(f';; Expanding macro: {result[0][0]}')
+                fmac = self._macros[result[0][0]]
+                new_exp = fmac.apply(self._context, result[1].as_value().to_list())
+                new_sexp = new_exp.to_sexp()
+                print(f';; Expansion = {new_sexp}')
+                return new_sexp
+            else:
+                return None
+        p = self.parse_list([self.parse_qualified_identifier],
+                            tail=lambda rest: rest)
+        p = parse_wrap(p, expand)
+        new_sexp = p(s)
+        if new_sexp:
+            return self.parse_exp(new_sexp)
+        else:
+            return None
 
     def parse_builtin_macros (self, s):
         p = parse_first([self.parse_let,

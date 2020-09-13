@@ -47,7 +47,7 @@ class Engine (object):
         return self.eval_sexp(ctxt, sexp)
 
     def parse_sexp (self, ctxt, sexp):
-        return self._parser.parse(sexp)
+        return self._parser.parse(ctxt, sexp)
 
     def eval_parsed_sexp (self, ctxt, type, result, source=None):
         env = ctxt['env']
@@ -69,12 +69,19 @@ class Engine (object):
             v = VFunction(params, expr, env)
             ctxt['def_env'].add(name, v, source=source)
             return { 'result': VNil(), 'report': ';; {}'.format(name)}
+        if type == 'macro':
+            (name, params, expr) = result
+            params = [ p.upper() for p in params ]
+            v = VFunction(params, expr, env)
+            self._parser.add_macro(name, v)
+            return { 'result': VNil(), 'report': ';; {}'.format(name)}
         if type == 'exp':
             return { 'result': result.eval(ctxt, env) }
-        raise LispError('Cannot recognize top level type {}'.format(type))
+        raise LispError('Cannot recognize top level type ({})'.format(type))
         
     def eval_sexp (self, ctxt, sexp, source=None):
-        (type, result) = self._parser.parse(sexp)
+        # need to pass an environment to the parser for evaluating macros
+        (type, result) = self._parser.parse(ctxt, sexp)
         return self.eval_parsed_sexp(ctxt, type, result, source=source)
            
     def root (self):
