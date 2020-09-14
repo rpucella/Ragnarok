@@ -72,7 +72,8 @@ class Shell:
             'set_module': self.set_module,
             'modules': self._open_modules,
             'read_file': self.process_file,
-            'shell': self
+            'shell': self,
+            'module': self._module or 'scratch'
         }
 
     def set_module (self, name):

@@ -193,6 +193,9 @@ class Value (object):
     def is_function (self):
         return self.type() in ('primitive', 'function')
 
+    def is_macro (self):
+        return self.type() == 'macro'
+
     def is_reference (self):
         return self.type() == 'ref'
 
@@ -561,6 +564,42 @@ class VFunction (Value):
     def apply (self, ctxt, values):
         new_env = self.binding_env(values)
         return self._body.eval(ctxt, new_env)
+    
+
+class VMacro (Value):
+    def __init__ (self, params, body, env):
+        self._params = params
+        self._body = body
+        self._env = env
+
+    def __repr__ (self):
+        return 'VMacro({}, {})'.format(self._params, repr(self._body))
+
+    def __str__ (self):
+        h = id(self)
+        return '#<MACRO {}>'.format(hex(h))
+
+    def binding_env (self, values):
+        if len(self._params) != len(values):
+            raise LispWrongArgNoError('Wrong number of arguments to {}'.format(self))
+        params_bindings = list(zip(self._params, values))
+        new_env = Environment(previous=self._env)
+        for (x, y) in params_bindings:
+            new_env.add(x, y)
+        return new_env
+
+    def type (self):
+        return 'macro'
+
+    def value (self):
+        return (self._params, self._body, self._env)
+
+    def apply (self, ctxt, sexp):
+        # takes an sexp and returns an sexp
+        values = sexp.as_value().to_list()
+        new_env = self.binding_env(values)
+        result = self._body.eval(ctxt, new_env)
+        return result.to_sexp()
     
 
 class VModule (Value):
@@ -1189,16 +1228,8 @@ def parse_first (ps):
 class Parser (object):
     def __init__ (self):
         # TODO: generalize to have multiple modules of macros
-        self._macros = {}
         self._gensym_count = 0
         self._context = None
-
-    # def set_environment (self, env):
-    #     self._env = env
-        
-    def add_macro (self, name, macro):
-        # TODO: get the module as well
-        self._macros[name] = macro
 
     def gensym (self, prefix='gsym'):
         c = self._gensym_count
@@ -1477,14 +1508,17 @@ class Parser (object):
 
     def parse_defined_macros (self, s):
         def expand (result):
-            if result[0][0] in self._macros:
-                print(f';; Expanding macro: {result[0][0]}')
-                fmac = self._macros[result[0][0]]
-                new_exp = fmac.apply(self._context, result[1].as_value().to_list())
-                new_sexp = new_exp.to_sexp()
-                print(f';; Expansion = {new_sexp}')
-                return new_sexp
-            else:
+            sym = Symbol(result[0][0])
+            try:
+                fmac = sym.eval(self._context, self._context['env'])
+                if fmac.is_macro():
+                    print(f';; Expanding macro: {result[0][0]}')
+                    new_sexp = fmac.apply(self._context, result[1])
+                    print(f';; Expansion = {new_sexp}')
+                    return new_sexp
+                else:
+                    return None
+            except:
                 return None
         p = self.parse_list([self.parse_qualified_identifier],
                             tail=lambda rest: rest)

@@ -72,8 +72,8 @@ class Engine (object):
         if type == 'macro':
             (name, params, expr) = result
             params = [ p.upper() for p in params ]
-            v = VFunction(params, expr, env)
-            self._parser.add_macro(name, v)
+            v = VMacro(params, expr, env)
+            ctxt['def_env'].add(name, v, source=source)
             return { 'result': VNil(), 'report': ';; {}'.format(name)}
         if type == 'exp':
             return { 'result': result.eval(ctxt, env) }

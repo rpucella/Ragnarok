@@ -24,6 +24,8 @@ it to, it shouldn't be too difficult to add a python-like interface to
 the language. Again, reinventing stuff smarter people have explored in
 the past. Again, so be it.
 
+Inspirations include Plan 9's [Acme](http://doc.cat-v.org/plan_9/4th_edition/papers/acme/), [mux](http://doc.cat-v.org/bell_labs/transparent_wsys/transparent_wsys.pdf), and [Oberon](https://people.inf.ethz.ch/wirth/ProjectOberon/UsingOberon.pdf)a
+
 
 ## Running the code
 
