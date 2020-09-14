@@ -1334,9 +1334,9 @@ class Parser (object):
 
     def parse_qualified_identifier (self, s):
 
-        char = r'A-Za-z-+/*_.?!@$'
+        char = r'A-Za-z-+/*_.?!@$<>='
         identifier = r'[{c}0-9]*[{c}#][{c}#0-9]*'.format(c=char)
-        qidentifier = r'({id}:)?{id}'.format(id=identifier)
+        qidentifier = r'(?:{id}:)?{id}'.format(id=identifier)
 
         if not s:
             return None
