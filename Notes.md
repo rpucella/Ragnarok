@@ -258,3 +258,7 @@ For methods, it's part of the application evaluation -
     
 First evaluate `arg1-exp` to a value `v` - if `v` is an object and `f-exp` is a symbol, check if `v` has a method called `f-exp`, and if so, lookup the method, finish evaluating arguments, and apply the method to the arguments (passing `v` as `this`). Otherwise, evaluate `f-exp` using the normal evaluation rules.
 
+## UI
+
+Possibly use [PyQt](https://build-system.fman.io/pyqt5-tutorial) and packaged with [fbs](https://github.com/mherrmann/fbs-tutorial).
+
