@@ -663,13 +663,17 @@ class Literal (Expression):
             
     
 class Symbol (Expression):
-    def __init__ (self, sym, qualifiers=[]):
+    def __init__ (self, sym):
         self._symbol = sym.upper()
-        self._qualifiers = qualifiers
+        if '::' in sym:
+            subsymbols = sym.split('::')
+            self._qualifiers = subsymbols[:-1]
+            self._qualified_symbol = subsymbols[-1]
+        else:
+            self._qualifiers = []
+            self._qualified_symbol = self._symbol
 
     def __repr__ (self):
-        if self._qualifiers:
-            return 'Symbol({}, {})'.format(':'.join(self._qualifiers), self._symbol)
         return 'Symbol({})'.format(self._symbol)
 
     def eval (self, ctxt, env):
@@ -679,7 +683,7 @@ class Symbol (Expression):
             v = env.lookup(self._qualifiers[0])['value']
             if not v.is_module():
                 raise LispError('Symbol {} does not represent a module'.format(self._qualifiers[0]))
-            v = v.env().lookup(self._symbol)['value']
+            v = v.env().lookup(self._qualified_symbol)['value']
         else:
             # unqualified name - look in the default environment + opened modules if any
             v = env.find(self._symbol)
@@ -1003,9 +1007,9 @@ class SSymbol (SAtom):
         return VSymbol(self._content)
 
     def to_expression (self): 
-        if ':' in self._content:
-            subsymbols = self._content.split(':')
-            return Symbol(subsymbols[-1], qualifiers=subsymbols[:-1])
+        # if ':' in self._content:
+        #     subsymbols = self._content.split(':')
+        #     return Symbol(subsymbols[-1], qualifiers=subsymbols[:-1])
         return Symbol(self._content)
     
     
@@ -1365,7 +1369,7 @@ class Parser (object):
 
     def parse_qualified_identifier (self, s):
 
-        char = r'A-Za-z-+/*_.?!@$'
+        char = r'A-Za-z-+=<>/*_.?!@$'
         identifier = r'[{c}0-9]*[{c}#][{c}#0-9]*'.format(c=char)
         qidentifier = r'({id}:)?{id}'.format(id=identifier)
 
@@ -1520,7 +1524,7 @@ class Parser (object):
                     return None
             except:
                 return None
-        p = self.parse_list([self.parse_qualified_identifier],
+        p = self.parse_list([self.parse_identifier],
                             tail=lambda rest: rest)
         p = parse_wrap(p, expand)
         new_sexp = p(s)
