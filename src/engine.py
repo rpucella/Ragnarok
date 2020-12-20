@@ -8,7 +8,7 @@ _VERSION = '0.0.1'
 class Engine (object):
     
     def __init__ (self, persist=True):
-        print(f';; Ragnarok engine {_VERSION}')
+        print(f';; Ragnarok Engine {_VERSION}')
         self._parser = Parser()
         self._root = Environment()
         # core

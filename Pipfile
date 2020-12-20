@@ -13,6 +13,7 @@ lint = 'python -m pylint --errors-only src tests'
 [packages]
 pytest = "*"
 pylint = "*"
+pyqt5 = "==5.9.2"
 
 [requires]
 python_version = "3"

@@ -1,5 +1,10 @@
 # Notes
 
+## To Digest
+
+https://talks.golang.org/2012/splash.article
+
+
 ## Modules
 
 A module is a wrapper around an environment.
@@ -37,7 +42,11 @@ Modules or declarations within could be loaded lazily. The environment could con
     }
 
 
-## Symbols and Keywords
+## Symbols
+
+A symbol is a symbol - it's only when you evaluate a symbol that you take it apart into module and name. Comparing two symbols for equality is really just comparing their underlying strings. 'a and 'core::a are distinct symbols, not matter which module you're in. But (eval 'a) looks up the value of a in the current module, while (eval 'core::a) looks up the value of a in the core module. I think this makes sense, and it avoids the need for keywords. And it lets us nicely use :: for module qualification.
+
+### CLisp model with symbols and keywords
 
 Symbols are always interned - always belong to a module - if you don't specify a module, they're part of the current module.
 
@@ -47,7 +56,7 @@ Two symbols in two different modules are not equal.
 
 This means that if a module FOO create a dictionary `#dict((a 10) (b 20))` then to look up the value bound to `a` from some other module you would need to write `(dict-get 'foo:a ...)`. That's a bit annoying. Though really what you would use for that would be keywords, so that the dictionary should say `#dict((:a 10) (:b 20))` and you'd look it up with `(dict-get :a ...)`. 
 
-I think the main reason this is needed is to get `eval` to work somewhat nicely. 
+I think the main reason this is needed is to get `eval` to work somewhat nicely.
 
 There is a special module called `keyword`. Symbols in the `keyword` module evaluate to themselves, and are called keywords. They can be abbreviated `:foo`. Thus, `:foo` evaluates to `:foo`. And of course, two keywords can be compared simply based off their label, since their module is always `keyword`. 
 
@@ -258,3 +267,17 @@ For methods, it's part of the application evaluation -
     
 First evaluate `arg1-exp` to a value `v` - if `v` is an object and `f-exp` is a symbol, check if `v` has a method called `f-exp`, and if so, lookup the method, finish evaluating arguments, and apply the method to the arguments (passing `v` as `this`). Otherwise, evaluate `f-exp` using the normal evaluation rules.
 
+## UI
+
+Possibly use [PyQt](https://build-system.fman.io/pyqt5-tutorial) and packaged with [fbs](https://github.com/mherrmann/fbs-tutorial).
+
+See also QML
+
+## Generic functions
+
+We have (string-append ...)  and (append ...) for lists, but we could also write (append ...) as a generic
+function that depending on the type of arguments appends lists or strings or vectors or whatnot.
+
+(In fact, you can append anything that is sequence-like, suggesting the obvious subtyping)
+
+Do we want a genuine object system?
