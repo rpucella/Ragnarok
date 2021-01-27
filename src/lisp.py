@@ -446,8 +446,12 @@ class VCons (Value):
         self._cdr = cdr
 
     def to_list (self):
-        lst = self._cdr.to_list()
-        return [self._car] + lst
+        current = self
+        result = []
+        while current.type() != 'empty-list':
+            result.append(current.car())
+            current = current.cdr()
+        return result
     
     def __repr__ (self):
         return 'VCons({},{})'.format(repr(self._car), repr(self._cdr))
