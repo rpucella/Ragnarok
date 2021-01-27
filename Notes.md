@@ -358,3 +358,43 @@ Do we want a genuine object system?
     #primitive("name")
     #dict((10 20) (30 40) (50 60))
     
+
+## Generics
+
+Define generic getters and updater for various interesting operations:
+
+    (get <obj> <args...>)
+    (update <obj> <args...> <value>)
+    
+This works for dictionaries, references, lists.
+
+Data structures are immutable - update reconstructs a new object.
+
+To make a mutable dictionary, you need to make values references.
+
+    (get <reference>)
+    (set <reference> <value>)
+
+If we have a dictionary d, we can read key k that holds a mutable value with:
+
+    (get (get d k))
+    
+which can be written:
+
+    (get* d k)
+    
+and write to it with:
+
+    (set (get d k) v)
+    
+Or more simply:
+
+    (set* d k v)
+    
+where:
+
+    (get* obj arg ...) = (get (get obj arg ...))
+    (set* obj args ... val) = (set (get obj arg ...) v)
+    
+
+
