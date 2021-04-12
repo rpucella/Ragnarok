@@ -12,6 +12,9 @@ type Value interface {
 	tailValue() Value
 	apply([]Value) Value
 	str() string
+	isAtom() bool
+	isSymbol() bool
+	isCons() bool
 	/*
 		type() string
 		isNumber() bool
@@ -73,6 +76,20 @@ func (v *VInteger) tailValue() Value {
 	panic("Boom!")
 }
 
+func (v *VInteger) isAtom() bool {
+	return true
+}
+
+func (v *VInteger) isSymbol() bool {
+	return false
+}
+
+func (v *VInteger) isCons() bool {
+	return false
+}
+
+
+
 type VBoolean struct {
 	val bool
 }
@@ -121,6 +138,18 @@ func (v *VBoolean) tailValue() Value {
 	panic("Boom!")
 }
 
+func (v *VBoolean) isAtom() bool {
+	return true
+}
+
+func (v *VBoolean) isSymbol() bool {
+	return false
+}
+
+func (v *VBoolean) isCons() bool {
+	return false
+}
+
 type VPrimitive struct {
 	name      string
 	primitive func([]Value) Value
@@ -164,6 +193,18 @@ func (v *VPrimitive) tailValue() Value {
 	panic("Boom!")
 }
 
+func (v *VPrimitive) isAtom() bool {
+	return false
+}
+
+func (v *VPrimitive) isSymbol() bool {
+	return false
+}
+
+func (v *VPrimitive) isCons() bool {
+	return false
+}
+
 type VEmpty struct {
 }
 
@@ -201,6 +242,18 @@ func (v *VEmpty) headValue() Value {
 
 func (v *VEmpty) tailValue() Value {
 	panic("Boom!")
+}
+
+func (v *VEmpty) isAtom() bool {
+	return false
+}
+
+func (v *VEmpty) isSymbol() bool {
+	return false
+}
+
+func (v *VEmpty) isCons() bool {
+	return false
 }
 
 type VCons struct {
@@ -245,6 +298,18 @@ func (v *VCons) tailValue() Value {
 	return v.tail
 }
 
+func (v *VCons) isAtom() bool {
+	return false
+}
+
+func (v *VCons) isSymbol() bool {
+	return false
+}
+
+func (v *VCons) isCons() bool {
+	return true
+}
+
 type VSymbol struct {
 	name string
 }
@@ -283,4 +348,16 @@ func (v *VSymbol) headValue() Value {
 
 func (v *VSymbol) tailValue() Value {
 	panic("Boom!")
+}
+
+func (v *VSymbol) isAtom() bool {
+	return true
+}
+
+func (v *VSymbol) isSymbol() bool {
+	return true
+}
+
+func (v *VSymbol) isCons() bool {
+	return true
 }

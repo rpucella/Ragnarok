@@ -18,15 +18,24 @@ func main() {
 
 	test_read()
 
+	fmt.Println("------------------------------------------------------------")
+
+	env := sampleEnv()
 	reader := bufio.NewReader(os.Stdin)
-	//env := sampleEnv()
 	for {
 		fmt.Print("> ")
 		text, _ := reader.ReadString('\n')
 		v, _ := read(text)
-		if v != nil {
-			fmt.Println(v.display())
+		if v == nil {
+			fmt.Println("Cannot read", text)
+			continue
 		}
+		e := parseExpr(v)
+		if e == nil {
+			fmt.Println("Cannot parse", v.str())
+			continue
+		}
+		fmt.Println(e.eval(env).display())
 	}
 }
 
@@ -34,7 +43,8 @@ func sampleEnv() *Env {
 	current := map[string]Value{
 		"a": &VInteger{10},
 		"b": &VInteger{20},
-		"+": &VPrimitive{"+", primitivePlus, 0},
+		"+": &VPrimitive{"+", primitiveAdd, 0},
+		"*": &VPrimitive{"*", primitiveMult, 0},
 		"t": &VBoolean{true},
 		"f": &VBoolean{false},
 	}
@@ -51,7 +61,7 @@ func test_value_plus() {
 	var v1 Value = &VInteger{10}
 	var v2 Value = &VInteger{20}
 	var v3 Value = &VInteger{30}
-	var vp Value = &VPrimitive{"+", primitivePlus, 0}
+	var vp Value = &VPrimitive{"+", primitiveAdd, 0}
 	var args []Value = []Value{v1, v2, v3}
 	fmt.Println(vp.str(), "->", vp.apply(args).intValue())
 }
@@ -67,26 +77,26 @@ func test_literal() {
 
 func test_lookup() {
 	env := sampleEnv()
-	e1 := &Symbol{"a"}
+	e1 := &Id{"a"}
 	fmt.Println(e1.str(), "->", e1.eval(env).display())
-	e2 := &Symbol{"+"}
+	e2 := &Id{"+"}
 	fmt.Println(e2.str(), "->", e2.eval(env).display())
 }
 
 func test_apply() {
 	env := sampleEnv()
-	e1 := &Symbol{"a"}
-	e2 := &Symbol{"b"}
+	e1 := &Id{"a"}
+	e2 := &Id{"b"}
 	args := []AST{e1, e2}
-	e3 := &Apply{&Symbol{"+"}, args}
+	e3 := &Apply{&Id{"+"}, args}
 	fmt.Println(e3.str(), "->", e3.eval(env).display())
 }
 
 func test_if() {
 	env := sampleEnv()
-	e1 := &If{&Symbol{"t"}, &Symbol{"a"}, &Symbol{"b"}}
+	e1 := &If{&Id{"t"}, &Id{"a"}, &Id{"b"}}
 	fmt.Println(e1.str(), "->", e1.eval(env).display())
-	e2 := &If{&Symbol{"f"}, &Symbol{"a"}, &Symbol{"b"}}
+	e2 := &If{&Id{"f"}, &Id{"a"}, &Id{"b"}}
 	fmt.Println(e2.str(), "->", e2.eval(env).display())
 }
 

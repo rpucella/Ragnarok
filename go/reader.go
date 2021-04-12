@@ -74,15 +74,11 @@ func read(s string) (Value, string) {
 	}
 	result, rest = readLP(s)
 	if result != "" {
-		var expr Value
 		var exprs Value
-		expr, rest = read(rest)
-		if expr != nil {
-			exprs, rest = readList(rest)
-			result, rest = readRP(rest)
-			if result != "" {
-				return &VCons{head: expr, tail: exprs}, rest
-			}
+		exprs, rest = readList(rest)
+		result, rest = readRP(rest)
+		if result != "" {
+			return exprs, rest
 		}
 	}
 	return nil, s

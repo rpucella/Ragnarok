@@ -1,5 +1,77 @@
 package main
 
+const kw_DEF string = "def"
+const kw_CONST string = "const"
+const kw_VAR string = "var"
+const kw_MACRO string = "macro"
+const kw_LET string = "let"
+const kw_LETS string = "let*"
+const kw_LETREC string = "letrec"
+const kw_LOOP string = "let"
+const kw_IF string = "if"
+const kw_FUN string = "fun"
+const kw_FUNREC string = "rec"
+const kw_DO string = "do"
+const kw_QUOTE string = "quote"
+const kw_DICT string = "dict"
+const kw_AND string = "and"
+const kw_OR string = "or"
+
+func parseDecl(sexp Value) (string, string, AST, Value) {
+	panic("Boom!")
+}
+
+func parseExpr(sexp Value) AST {
+
+	expr := parseAtom(sexp)
+	if expr != nil {
+		return expr
+	}
+
+	expr = parseApply(sexp)
+	if expr != nil {
+		return expr
+	}
+	return nil
+}
+
+func parseAtom(sexp Value) AST {
+	if sexp.isSymbol() {
+		return &Id{sexp.strValue()}
+	}
+	if sexp.isAtom() {
+		return &Literal{sexp}
+	}
+	return nil
+}
+
+func parseApply(sexp Value) AST {
+	if !sexp.isCons() {
+		return nil
+	}
+	fun := parseExpr(sexp.headValue())
+	if fun == nil {
+		return nil
+	}
+	args := parseExprs(sexp.tailValue())
+	return &Apply{fun, args}
+}
+
+func parseExprs(sexp Value) []AST {
+	args := make([]AST, 0)
+	current := sexp
+	for current.isCons() {
+		next := parseExpr(current.headValue())
+		if next == nil {
+			return nil
+		}
+		args = append(args, next)
+		current = current.tailValue()
+	}
+	// check that current is actually empty!
+	return args
+}
+
 /*
 func parseToken(token string, s string) (string, string) {
 	r, _ := regexp.Compile(token)

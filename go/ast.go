@@ -7,10 +7,18 @@ type AST interface {
 	str() string
 }
 
-// do we use literal? or integer?
-
 type Literal struct {
 	val Value
+}
+
+type Id struct {
+	name string
+}
+
+type If struct {
+	cnd AST
+	thn AST
+	els AST
 }
 
 func (e *Literal) eval(env *Env) Value {
@@ -21,22 +29,12 @@ func (e *Literal) str() string {
 	return fmt.Sprintf("Literal[%s]", e.val.str())
 }
 
-type Symbol struct {
-	name string
-}
-
-func (e *Symbol) eval(env *Env) Value {
+func (e *Id) eval(env *Env) Value {
 	return env.lookup(e.name)
 }
 
-func (e *Symbol) str() string {
-	return fmt.Sprintf("Symbol[%s]", e.name)
-}
-
-type If struct {
-	cnd AST
-	thn AST
-	els AST
+func (e *Id) str() string {
+	return fmt.Sprintf("Id[%s]", e.name)
 }
 
 func (e *If) eval(env *Env) Value {
