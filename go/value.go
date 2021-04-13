@@ -1,4 +1,4 @@
-package main
+ package main
 
 import "fmt"
 
@@ -10,31 +10,13 @@ type Value interface {
 	strValue() string
 	headValue() Value
 	tailValue() Value
-	apply([]Value) Value
+	apply([]Value) (Value, error)
 	str() string
 	isAtom() bool
 	isSymbol() bool
 	isCons() bool
 	isEmpty() bool
-	/*
-		type() string
-		isNumber() bool
-		isBoolean() bool
-		isString() bool
-		isSymbol() bool
-		isNil() bool
-		isEmpty() bool
-		isCons() bool
-		isFunction() bool
-		isMacro() bool
-		isReference() bool
-		isAtom() bool
-		isList() bool
-		isDict() bool
-		isTrue() bool
-		isEqual(Value) bool
-		isEq(Value) bool
-	*/
+	isTrue() bool
 }
 
 type VInteger struct {
@@ -70,6 +52,10 @@ type VFunction struct {
 	env *Env
 }
 
+type VString struct {
+	val string
+}
+
 func (v *VInteger) display() string {
 	return fmt.Sprintf("%d", v.val)
 }
@@ -90,8 +76,8 @@ func (v *VInteger) boolValue() bool {
 	panic("Boom!")
 }
 
-func (v *VInteger) apply(args []Value) Value {
-	panic("Boom!")
+func (v *VInteger) apply(args []Value) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.str())
 }
 
 func (v *VInteger) str() string {
@@ -122,6 +108,10 @@ func (v *VInteger) isEmpty() bool {
 	return false
 }
 
+func (v *VInteger) isTrue() bool {
+	return v.val != 0
+}
+
 func (v *VBoolean) display() string {
 	if v.val {
 		return "#t"
@@ -146,8 +136,8 @@ func (v *VBoolean) boolValue() bool {
 	return v.val
 }
 
-func (v *VBoolean) apply(args []Value) Value {
-	panic("Boom!")
+func (v *VBoolean) apply(args []Value) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.str())
 }
 
 func (v *VBoolean) str() string {
@@ -182,6 +172,10 @@ func (v *VBoolean) isEmpty() bool {
 	return false
 }
 
+func (v *VBoolean) isTrue() bool {
+	return v.val
+}
+
 func (v *VPrimitive) display() string {
 	return fmt.Sprintf("#<PRIMITIVE %s>", v.name)
 }
@@ -202,9 +196,9 @@ func (v *VPrimitive) boolValue() bool {
 	panic("Boom!")
 }
 
-func (v *VPrimitive) apply(args []Value) Value {
+func (v *VPrimitive) apply(args []Value) (Value, error) {
 	// check length?
-	return v.primitive(args)
+	return v.primitive(args), nil
 }
 
 func (v *VPrimitive) str() string {
@@ -235,6 +229,10 @@ func (v *VPrimitive) isEmpty() bool {
 	return false
 }
 
+func (v *VPrimitive) isTrue() bool {
+	return true
+}
+
 func (v *VEmpty) display() string {
 	return "()"
 }
@@ -255,8 +253,8 @@ func (v *VEmpty) boolValue() bool {
 	panic("Boom!")
 }
 
-func (v *VEmpty) apply(args []Value) Value {
-	panic("Boom!")
+func (v *VEmpty) apply(args []Value) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.str())
 }
 
 func (v *VEmpty) str() string {
@@ -287,6 +285,10 @@ func (v *VEmpty) isEmpty() bool {
 	return true
 }
 
+func (v *VEmpty) isTrue() bool {
+	return false
+}
+
 func (v *VCons) display() string {
 	return "(" + v.head.display() + v.tail.displayCDR()
 }
@@ -307,8 +309,8 @@ func (v *VCons) boolValue() bool {
 	panic("Boom!")
 }
 
-func (v *VCons) apply(args []Value) Value {
-	panic("Boom!")
+func (v *VCons) apply(args []Value) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.str())
 }
 
 func (v *VCons) str() string {
@@ -339,6 +341,10 @@ func (v *VCons) isEmpty() bool {
 	return false
 }
 
+func (v *VCons) isTrue() bool {
+	return true
+}
+
 func (v *VSymbol) display() string {
 	return v.name
 }
@@ -359,8 +365,8 @@ func (v *VSymbol) boolValue() bool {
 	panic("Boom!")
 }
 
-func (v *VSymbol) apply(args []Value) Value {
-	panic("Boom!")
+func (v *VSymbol) apply(args []Value) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.str())
 }
 
 func (v *VSymbol) str() string {
@@ -391,6 +397,10 @@ func (v *VSymbol) isEmpty() bool {
 	return false
 }
 
+func (v *VSymbol) isTrue() bool {
+	return true
+}
+
 func (v *VFunction) display() string {
 	return fmt.Sprintf("#<FUN ...>")
 }
@@ -411,17 +421,15 @@ func (v *VFunction) boolValue() bool {
 	panic("Boom!")
 }
 
-func (v *VFunction) apply(args []Value) Value {
+func (v *VFunction) apply(args []Value) (Value, error) {
 	if len(v.params) != len(args) {
-		panic("BOOM!")
+		return nil, fmt.Errorf("Wrong number of arguments to application to %s", v.str())
 	}
 	new_env := newEnv(v.env)
 	for i := range v.params {
 		new_env.update(v.params[i], args[i])
 	}
-	// TODO: handle error
-	result, _ := v.body.eval(new_env)
-	return result
+	return v.body.eval(new_env)
 }
 
 func (v *VFunction) str() string {
@@ -452,3 +460,62 @@ func (v *VFunction) isEmpty() bool {
 	return false
 }
 
+func (v *VFunction) isTrue() bool {
+	return true
+}
+
+func (v *VString) display() string {
+	return "\"" + v.val + "\""
+}
+
+func (v *VString) displayCDR() string {
+	panic("Boom!")
+}
+
+func (v *VString) intValue() int {
+	panic("Boom!")
+}
+
+func (v *VString) strValue() string {
+	return v.val
+}
+
+func (v *VString) boolValue() bool {
+	panic("Boom!")
+}
+
+func (v *VString) apply(args []Value) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.str())
+}
+
+func (v *VString) str() string {
+	return fmt.Sprintf("VString[%s]", v.str)
+}
+
+func (v *VString) headValue() Value {
+	panic("Boom!")
+}
+
+func (v *VString) tailValue() Value {
+	panic("Boom!")
+}
+
+func (v *VString) isAtom() bool {
+	return true
+}
+
+func (v *VString) isSymbol() bool {
+	return false
+}
+
+func (v *VString) isCons() bool {
+	return false
+}
+
+func (v *VString) isEmpty() bool {
+	return false
+}
+
+func (v *VString) isTrue() bool {
+	return (v.val != "")
+}

@@ -56,7 +56,7 @@ func (e *If) eval(env *Env) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	if c.boolValue() {
+	if c.isTrue() {
 		return e.thn.eval(env)
 	} else {
 		return e.els.eval(env)
@@ -79,7 +79,7 @@ func (e *Apply) eval(env *Env) (Value, error) {
 			return nil, err
 		}
 	}
-	return f.apply(args), nil
+	return f.apply(args)
 }
 
 func (e *Apply) str() string {

@@ -3,6 +3,7 @@ package main
 import "strconv"
 import "strings"
 import "regexp"
+import "errors"
 
 func readToken(token string, s string) (string, string) {
 	r, _ := regexp.Compile(`^` + token)
@@ -44,11 +45,20 @@ func readQuote(s string) (bool, string) {
 
 func readSymbol(s string) (Value, string) {
 	//fmt.Println("Trying to read as symbol")
-	result, rest := readToken(`[^'()#\s]+`, s)
+	result, rest := readToken(`[^"'()#\s]+`, s)
 	if result == "" {
 		return nil, s
 	}
 	return &VSymbol{result}, rest
+}
+
+func readString(s string) (Value, string) {
+	//fmt.Println("Trying to read as symbol")
+	result, rest := readToken(`"[^\n"]+"`, s)
+	if result == "" {
+		return nil, s
+	}
+	return &VString{result[1:len(result) - 1]}, rest
 }
 
 func readInteger(s string) (Value, string) {
@@ -76,15 +86,10 @@ func readBoolean(s string) (Value, string) {
 }
 
 func readList(s string) (Value, string, error) {
-	var rest string
 	var current *VCons
 	var result *VCons
-	var expr Value
-	var err error
-	if expr, rest, err = read(s); err != nil {
-		return nil, s, err
-	}
-	for expr != nil {
+	expr, rest, err := read(s)
+	for err == nil {
 		if current == nil {
 			result = &VCons{head: expr, tail: &VEmpty{}}
 			current = result
@@ -94,9 +99,6 @@ func readList(s string) (Value, string, error) {
 			current = temp
 		}
 		expr, rest, err = read(rest)
-		if err != nil {
-			return nil, s, err
-		}
 	}
 	if current == nil {
 		return &VEmpty{}, rest, nil
@@ -115,6 +117,10 @@ func read(s string) (Value, string, error) {
 		return result, rest, nil
 	}
 	result, rest = readSymbol(s)
+	if result != nil {
+		return result, rest, nil
+	}
+	result, rest = readString(s)
 	if result != nil {
 		return result, rest, nil
 	}
@@ -143,9 +149,10 @@ func read(s string) (Value, string, error) {
 		}
 		resultB, rest = readRP(rest)
 		if !resultB {
-			return nil, s, nil
+			return nil, s, errors.New("missing closing parenthesis")
 		}
 		return exprs, rest, nil
 	}
-	return nil, s, nil
+	//return nil, s, nil
+	return nil, s, errors.New("Cannot read input")
 }

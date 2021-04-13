@@ -17,6 +17,10 @@ func main() {
 
 	fmt.Println("------------------------------------------------------------")
 
+	shell()
+}
+
+func shell() {
 	env := sampleEnv()
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -24,17 +28,17 @@ func main() {
 		text, _ := reader.ReadString('\n')
 		v, _, err := read(text)
 		if err != nil {
-			fmt.Println("Cannot read", text, "-", err.Error())
+			fmt.Println("READ -", err.Error())
 			continue
 		}
 		e, err := parseExpr(v)
 		if err != nil { 
-			fmt.Println("Cannot parse", v.str(), "-", err.Error())
+			fmt.Println("PARSE -", err.Error())
 			continue
 		}
 		v, err = e.eval(env)
 		if err != nil {
-			fmt.Println("Evaluation error -", err.Error())
+			fmt.Println("EVAL -", err.Error())
 			continue
 		}
 		fmt.Println(v.display())
@@ -65,7 +69,8 @@ func test_value_plus() {
 	var v3 Value = &VInteger{30}
 	var vp Value = &VPrimitive{"+", primitiveAdd, 0}
 	var args []Value = []Value{v1, v2, v3}
-	fmt.Println(vp.str(), "->", vp.apply(args).intValue())
+	vr, _ := vp.apply(args)
+	fmt.Println(vp.str(), "->", vr.intValue())
 }
 
 func evalDisplay(e AST, env *Env) string {
