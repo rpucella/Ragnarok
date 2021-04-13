@@ -19,8 +19,42 @@ const kw_DICT string = "dict"
 const kw_AND string = "and"
 const kw_OR string = "or"
 
-func parseDecl(sexp Value) (string, string, AST, Value) {
-	panic("Boom!")
+func parseDef(sexp Value) (*Def, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isDef := parseKeyword(kw_DEF, sexp.headValue())
+	if !isDef {
+		return nil, nil
+	}
+	next := sexp.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("Too few arguments to def")
+	}
+	defBlock := next.headValue()
+	if !defBlock.isCons() {
+		return nil, errors.New("No definition name in def?")
+	}
+	if !defBlock.headValue().isSymbol() { 
+		return nil, errors.New("Definition name not a symbol")
+	}
+	name := defBlock.headValue().strValue()
+	params, err := parseSymbols(defBlock.tailValue())
+	if err != nil {
+		return nil, err
+	}
+	next = next.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("Too few arguments to def")
+	}
+	body, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	if !next.tailValue().isEmpty() {
+		return nil, errors.New("Too many arguments to def")
+	}
+	return &Def{name, params, body}, nil
 }
 
 func parseExpr(sexp Value) (AST, error) {
@@ -29,29 +63,20 @@ func parseExpr(sexp Value) (AST, error) {
 		return expr, nil
 	}
 	expr, err := parseQuote(sexp)
-	if err != nil {
-		return nil, err
-	}
-	if expr != nil {
-		return expr, nil
+	if err != nil || expr != nil {
+		return expr, err
 	}
 	expr, err = parseIf(sexp)
-	if err != nil {
-		return nil, err
-	}
-	if expr != nil {
-		return expr, nil
+	if err != nil  || expr != nil {
+		return expr, err
 	}
 	expr, err = parseFunction(sexp)
 	if err != nil || expr != nil {
 		return expr, err
 	}
 	expr, err = parseApply(sexp)
-	if err != nil {
-		return nil, err
-	}
-	if expr != nil {
-		return expr, nil
+	if err != nil || expr != nil {
+		return expr, err
 	}
 	return nil, nil
 }
@@ -198,9 +223,6 @@ func parseExprs(sexp Value) ([]AST, error) {
 }
 
 func parseSymbols(sexp Value) ([]string, error) {
-	if !sexp.isCons() {
-		return nil, errors.New("Expected symbols list")
-	}
 	params := make([]string, 0)
 	current := sexp
 	for current.isCons() {

@@ -17,6 +17,7 @@ type Value interface {
 	isCons() bool
 	isEmpty() bool
 	isTrue() bool
+	isNil() bool
 }
 
 type VInteger struct {
@@ -54,6 +55,9 @@ type VFunction struct {
 
 type VString struct {
 	val string
+}
+
+type VNil struct {
 }
 
 func (v *VInteger) display() string {
@@ -110,6 +114,10 @@ func (v *VInteger) isEmpty() bool {
 
 func (v *VInteger) isTrue() bool {
 	return v.val != 0
+}
+
+func (v *VInteger) isNil() bool {
+	return false
 }
 
 func (v *VBoolean) display() string {
@@ -176,6 +184,10 @@ func (v *VBoolean) isTrue() bool {
 	return v.val
 }
 
+func (v *VBoolean) isNil() bool {
+	return false
+}
+
 func (v *VPrimitive) display() string {
 	return fmt.Sprintf("#<PRIMITIVE %s>", v.name)
 }
@@ -233,6 +245,10 @@ func (v *VPrimitive) isTrue() bool {
 	return true
 }
 
+func (v *VPrimitive) isNil() bool {
+	return false
+}
+
 func (v *VEmpty) display() string {
 	return "()"
 }
@@ -286,6 +302,10 @@ func (v *VEmpty) isEmpty() bool {
 }
 
 func (v *VEmpty) isTrue() bool {
+	return false
+}
+
+func (v *VEmpty) isNil() bool {
 	return false
 }
 
@@ -345,6 +365,10 @@ func (v *VCons) isTrue() bool {
 	return true
 }
 
+func (v *VCons) isNil() bool {
+	return false
+}
+
 func (v *VSymbol) display() string {
 	return v.name
 }
@@ -399,6 +423,10 @@ func (v *VSymbol) isEmpty() bool {
 
 func (v *VSymbol) isTrue() bool {
 	return true
+}
+
+func (v *VSymbol) isNil() bool {
+	return false
 }
 
 func (v *VFunction) display() string {
@@ -464,6 +492,10 @@ func (v *VFunction) isTrue() bool {
 	return true
 }
 
+func (v *VFunction) isNil() bool {
+	return false
+}
+
 func (v *VString) display() string {
 	return "\"" + v.val + "\""
 }
@@ -518,4 +550,69 @@ func (v *VString) isEmpty() bool {
 
 func (v *VString) isTrue() bool {
 	return (v.val != "")
+}
+
+func (v *VString) isNil() bool {
+	return false
+}
+
+func (v *VNil) display() string {
+	// figure out if this is the right thing?
+	return "#nil"
+}
+
+func (v *VNil) displayCDR() string {
+	panic("Boom!")
+}
+
+func (v *VNil) intValue() int {
+	panic("Boom!")
+}
+
+func (v *VNil) strValue() string {
+	panic("Boom!")
+}
+
+func (v *VNil) boolValue() bool {
+	panic("Boom!")
+}
+
+func (v *VNil) apply(args []Value) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.str())
+}
+
+func (v *VNil) str() string {
+	return fmt.Sprintf("VNil")
+}
+
+func (v *VNil) headValue() Value {
+	panic("Boom!")
+}
+
+func (v *VNil) tailValue() Value {
+	panic("Boom!")
+}
+
+func (v *VNil) isAtom() bool {
+	return false
+}
+
+func (v *VNil) isSymbol() bool {
+	return false
+}
+
+func (v *VNil) isCons() bool {
+	return false
+}
+
+func (v *VNil) isEmpty() bool {
+	return false
+}
+
+func (v *VNil) isTrue() bool {
+	return false
+}
+
+func (v *VNil) isNil() bool {
+	return true
 }

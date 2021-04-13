@@ -2,6 +2,12 @@ package main
 
 import "fmt"
 
+type Def struct {
+	name string
+	params []string
+	body AST
+}
+
 type AST interface {
 	eval(*Env) (Value, error)
 	str() string

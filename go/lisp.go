@@ -31,6 +31,17 @@ func shell() {
 			fmt.Println("READ -", err.Error())
 			continue
 		}
+		// check if it's a declaration
+		d, err := parseDef(v)
+		if err != nil { 
+			fmt.Println("PARSE -", err.Error())
+			continue
+		}
+		if d != nil {
+			fmt.Println("DECLARATION!", d)
+			continue
+		}
+		// check if it's an expression
 		e, err := parseExpr(v)
 		if err != nil { 
 			fmt.Println("PARSE -", err.Error())
