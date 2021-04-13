@@ -15,6 +15,7 @@ type Value interface {
 	isAtom() bool
 	isSymbol() bool
 	isCons() bool
+	isEmpty() bool
 	/*
 		type() string
 		isNumber() bool
@@ -38,6 +39,35 @@ type Value interface {
 
 type VInteger struct {
 	val int
+}
+
+type VBoolean struct {
+	val bool
+}
+
+type VPrimitive struct {
+	name      string
+	primitive func([]Value) Value
+	numArgs   int
+}
+
+type VEmpty struct {
+}
+
+type VCons struct {
+	head   Value
+	tail   Value
+	length int
+}
+
+type VSymbol struct {
+	name string
+}
+
+type VFunction struct {
+	params []string
+	body AST
+	env *Env
 }
 
 func (v *VInteger) display() string {
@@ -88,10 +118,8 @@ func (v *VInteger) isCons() bool {
 	return false
 }
 
-
-
-type VBoolean struct {
-	val bool
+func (v *VInteger) isEmpty() bool {
+	return false
 }
 
 func (v *VBoolean) display() string {
@@ -150,10 +178,8 @@ func (v *VBoolean) isCons() bool {
 	return false
 }
 
-type VPrimitive struct {
-	name      string
-	primitive func([]Value) Value
-	numArgs   int
+func (v *VBoolean) isEmpty() bool {
+	return false
 }
 
 func (v *VPrimitive) display() string {
@@ -205,7 +231,8 @@ func (v *VPrimitive) isCons() bool {
 	return false
 }
 
-type VEmpty struct {
+func (v *VPrimitive) isEmpty() bool {
+	return false
 }
 
 func (v *VEmpty) display() string {
@@ -256,10 +283,8 @@ func (v *VEmpty) isCons() bool {
 	return false
 }
 
-type VCons struct {
-	head   Value
-	tail   Value
-	length int
+func (v *VEmpty) isEmpty() bool {
+	return true
 }
 
 func (v *VCons) display() string {
@@ -310,8 +335,8 @@ func (v *VCons) isCons() bool {
 	return true
 }
 
-type VSymbol struct {
-	name string
+func (v *VCons) isEmpty() bool {
+	return false
 }
 
 func (v *VSymbol) display() string {
@@ -359,5 +384,71 @@ func (v *VSymbol) isSymbol() bool {
 }
 
 func (v *VSymbol) isCons() bool {
-	return true
+	return false
 }
+
+func (v *VSymbol) isEmpty() bool {
+	return false
+}
+
+func (v *VFunction) display() string {
+	return fmt.Sprintf("#<FUN ...>")
+}
+
+func (v *VFunction) displayCDR() string {
+	panic("Boom!")
+}
+
+func (v *VFunction) intValue() int {
+	panic("Boom!")
+}
+
+func (v *VFunction) strValue() string {
+	panic("Boom!")
+}
+
+func (v *VFunction) boolValue() bool {
+	panic("Boom!")
+}
+
+func (v *VFunction) apply(args []Value) Value {
+	if len(v.params) != len(args) {
+		panic("BOOM!")
+	}
+	new_env := newEnv(v.env)
+	for i := range v.params {
+		new_env.update(v.params[i], args[i])
+	}
+	// TODO: handle error
+	result, _ := v.body.eval(new_env)
+	return result
+}
+
+func (v *VFunction) str() string {
+	return fmt.Sprintf("VFunction[?]")
+}
+
+func (v *VFunction) headValue() Value {
+	panic("Boom!")
+}
+
+func (v *VFunction) tailValue() Value {
+	panic("Boom!")
+}
+
+func (v *VFunction) isAtom() bool {
+	return false
+}
+
+func (v *VFunction) isSymbol() bool {
+	return false
+}
+
+func (v *VFunction) isCons() bool {
+	return false
+}
+
+func (v *VFunction) isEmpty() bool {
+	return false
+}
+

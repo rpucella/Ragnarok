@@ -1,5 +1,7 @@
 package main
 
+import "errors"
+
 const kw_DEF string = "def"
 const kw_CONST string = "const"
 const kw_VAR string = "var"
@@ -21,18 +23,37 @@ func parseDecl(sexp Value) (string, string, AST, Value) {
 	panic("Boom!")
 }
 
-func parseExpr(sexp Value) AST {
-
+func parseExpr(sexp Value) (AST, error) {
 	expr := parseAtom(sexp)
 	if expr != nil {
-		return expr
+		return expr, nil
 	}
-
-	expr = parseApply(sexp)
+	expr, err := parseQuote(sexp)
+	if err != nil {
+		return nil, err
+	}
 	if expr != nil {
-		return expr
+		return expr, nil
 	}
-	return nil
+	expr, err = parseIf(sexp)
+	if err != nil {
+		return nil, err
+	}
+	if expr != nil {
+		return expr, nil
+	}
+	expr, err = parseFunction(sexp)
+	if err != nil || expr != nil {
+		return expr, err
+	}
+	expr, err = parseApply(sexp)
+	if err != nil {
+		return nil, err
+	}
+	if expr != nil {
+		return expr, nil
+	}
+	return nil, nil
 }
 
 func parseAtom(sexp Value) AST {
@@ -45,104 +66,152 @@ func parseAtom(sexp Value) AST {
 	return nil
 }
 
-func parseApply(sexp Value) AST {
-	if !sexp.isCons() {
-		return nil
+func parseKeyword(kw string, sexp Value) bool {
+	if !sexp.isSymbol() {
+		return false
 	}
-	fun := parseExpr(sexp.headValue())
-	if fun == nil {
-		return nil
-	}
-	args := parseExprs(sexp.tailValue())
-	return &Apply{fun, args}
+	return (sexp.strValue() == kw)
 }
 
-func parseExprs(sexp Value) []AST {
+func parseQuote(sexp Value) (AST, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isQ := parseKeyword(kw_QUOTE, sexp.headValue())
+	if !isQ {
+		return nil, nil
+	}
+	next := sexp.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("Malformed quote")
+	}
+	if !next.tailValue().isEmpty() {
+		return nil, errors.New("Too many arguments to quote")
+	}
+	return &Quote{next.headValue()}, nil
+}
+
+func parseIf(sexp Value) (AST, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isIf := parseKeyword(kw_IF, sexp.headValue())
+	if !isIf {
+		return nil, nil
+	}
+	next := sexp.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("Too few arguments to if")
+	}
+	cnd, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	next = next.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("Too few arguments to if")
+	}
+	thn, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	next = next.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("Too few arguments to if")
+	}
+	els, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	if !next.tailValue().isEmpty() {
+		return nil, errors.New("Too many arguments to if")
+	}
+	return &If{cnd, thn, els}, nil
+}
+
+func parseFunction(sexp Value) (AST, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isFun := parseKeyword(kw_FUN, sexp.headValue())
+	if !isFun {
+		return nil, nil
+	}
+	next := sexp.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("Too few arguments to fun")
+	}
+	params, err := parseSymbols(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	next = next.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("Too few arguments to fun")
+	}
+	body, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	if !next.tailValue().isEmpty() {
+		return nil, errors.New("Too many arguments to fun")
+	}
+	return &Function{params, body}, nil
+}
+
+func parseApply(sexp Value) (AST, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	fun, err := parseExpr(sexp.headValue())
+	if err != nil {
+		return nil, err
+	}
+	if fun == nil {
+		return nil, nil
+	}
+	args, err := parseExprs(sexp.tailValue())
+	if err != nil {
+		return nil, err
+	}
+	return &Apply{fun, args}, nil
+}
+
+func parseExprs(sexp Value) ([]AST, error) {
 	args := make([]AST, 0)
 	current := sexp
 	for current.isCons() {
-		next := parseExpr(current.headValue())
+		next, err := parseExpr(current.headValue())
+		if err != nil {
+			return nil, err
+		}
 		if next == nil {
-			return nil
+			return nil, nil
 		}
 		args = append(args, next)
 		current = current.tailValue()
 	}
-	// check that current is actually empty!
-	return args
-}
-
-/*
-func parseToken(token string, s string) (string, string) {
-	r, _ := regexp.Compile(token)
-	ss := strings.TrimSpace(s)
-	match := r.FindStringIndex(ss)
-	if len(match) == 0 {
-		// no match
-		return "", s
-	} else {
-		//fmt.Println("Token match", ss, match)
-		return ss[:match[1]], ss[match[1]:]
+	if !current.isEmpty() {
+		return nil, errors.New("Malformed expression list")
 	}
+	return args, nil
 }
 
-func parseLP(s string) (string, string) {
-	//fmt.Println("Trying to parse as LP")
-	return parseToken(`^\(`, s)
-}
-
-func parseRP(s string) (string, string) {
-	//fmt.Println("Trying to parse as RP")
-	return parseToken(`^\)`, s)
-}
-
-func parseSymbol(s string) (string, string) {
-	//fmt.Println("Trying to parse as symbol")
-	return parseToken(`^[^'()#\s]+`, s)
-}
-
-func parseInteger(s string) (string, string) {
-	//fmt.Println("Trying to parse as integer")
-	return parseToken(`^-?[0-9]+`, s)
-}
-
-func parseASTs(s string) ([]AST, string) {
-	result := make([]AST, 0, 10)
-	var rest string
-	var expr AST
-	expr, rest = parseAST(s)
-	for expr != nil {
-		result = append(result, expr)
-		expr, rest = parseAST(rest)
+func parseSymbols(sexp Value) ([]string, error) {
+	if !sexp.isCons() {
+		return nil, errors.New("Expected symbols list")
 	}
-	return result, rest
-}
-
-func parseAST(s string) (AST, string) {
-	//fmt.Println("Trying to parse string", s)
-	var result, rest string
-	result, rest = parseInteger(s)
-	if result != "" {
-		num, _ := strconv.Atoi(result)
-		return &Literal{&VInteger{num}}, rest
-	}
-	result, rest = parseSymbol(s)
-	if result != "" {
-		return &Symbol{result}, rest
-	}
-	result, rest = parseLP(s)
-	if result != "" {
-		var expr AST
-		var exprs []AST
-		expr, rest = parseAST(rest)
-		if expr != nil {
-			exprs, rest = parseASTs(rest)
-			result, rest = parseRP(rest)
-			if result != "" {
-				return &Apply{expr, exprs}, rest
-			}
+	params := make([]string, 0)
+	current := sexp
+	for current.isCons() {
+		if !current.headValue().isSymbol() {
+			return nil, errors.New("Expected symbol in list")
 		}
+		params = append(params, current.headValue().strValue())
+		current = current.tailValue()
 	}
-	return nil, s
+	if !current.isEmpty() {
+		return nil, errors.New("Malformed symbol list")
+	}
+	return params, nil
 }
-*/

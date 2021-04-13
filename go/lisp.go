@@ -8,14 +8,11 @@ func main() {
 
 	test_value_10()
 	test_value_plus()
-
 	test_literal()
 	test_lookup()
 	test_apply()
 	test_if()
-
 	test_lists()
-
 	test_read()
 
 	fmt.Println("------------------------------------------------------------")
@@ -25,17 +22,22 @@ func main() {
 	for {
 		fmt.Print("> ")
 		text, _ := reader.ReadString('\n')
-		v, _ := read(text)
-		if v == nil {
-			fmt.Println("Cannot read", text)
+		v, _, err := read(text)
+		if err != nil {
+			fmt.Println("Cannot read", text, "-", err.Error())
 			continue
 		}
-		e := parseExpr(v)
-		if e == nil {
-			fmt.Println("Cannot parse", v.str())
+		e, err := parseExpr(v)
+		if err != nil { 
+			fmt.Println("Cannot parse", v.str(), "-", err.Error())
 			continue
 		}
-		fmt.Println(e.eval(env).display())
+		v, err = e.eval(env)
+		if err != nil {
+			fmt.Println("Evaluation error -", err.Error())
+			continue
+		}
+		fmt.Println(v.display())
 	}
 }
 
@@ -48,7 +50,7 @@ func sampleEnv() *Env {
 		"t": &VBoolean{true},
 		"f": &VBoolean{false},
 	}
-	env := &Env{current: current}
+	env := &Env{bindings: current}
 	return env
 }
 
@@ -66,21 +68,26 @@ func test_value_plus() {
 	fmt.Println(vp.str(), "->", vp.apply(args).intValue())
 }
 
+func evalDisplay(e AST, env *Env) string {
+	v, _ := e.eval(env)
+	return v.display()
+}
+
 func test_literal() {
 	v1 := &VInteger{10}
 	e1 := &Literal{v1}
-	fmt.Println(e1.str(), "->", e1.eval(nil).display())
+	fmt.Println(e1.str(), "->", evalDisplay(e1, nil))
 	v2 := &VBoolean{true}
 	e2 := &Literal{v2}
-	fmt.Println(e2.str(), "->", e2.eval(nil).display())
+	fmt.Println(e2.str(), "->", evalDisplay(e2, nil))
 }
 
 func test_lookup() {
 	env := sampleEnv()
 	e1 := &Id{"a"}
-	fmt.Println(e1.str(), "->", e1.eval(env).display())
+	fmt.Println(e1.str(), "->", evalDisplay(e1, env))
 	e2 := &Id{"+"}
-	fmt.Println(e2.str(), "->", e2.eval(env).display())
+	fmt.Println(e2.str(), "->", evalDisplay(e2, env))
 }
 
 func test_apply() {
@@ -89,27 +96,29 @@ func test_apply() {
 	e2 := &Id{"b"}
 	args := []AST{e1, e2}
 	e3 := &Apply{&Id{"+"}, args}
-	fmt.Println(e3.str(), "->", e3.eval(env).display())
+	fmt.Println(e3.str(), "->", evalDisplay(e3, env))
 }
 
 func test_if() {
 	env := sampleEnv()
 	e1 := &If{&Id{"t"}, &Id{"a"}, &Id{"b"}}
-	fmt.Println(e1.str(), "->", e1.eval(env).display())
+	fmt.Println(e1.str(), "->", evalDisplay(e1, env))
 	e2 := &If{&Id{"f"}, &Id{"a"}, &Id{"b"}}
-	fmt.Println(e2.str(), "->", e2.eval(env).display())
+	fmt.Println(e2.str(), "->", evalDisplay(e2, env))
 }
 
 func test_read() {
-	v1, _ := read("123")
+	v1, _, _ := read("123")
 	fmt.Println(v1.str(), "->", v1.display())
-	v2, _ := read("a")
+	v2, _, _ := read("a")
 	fmt.Println(v2.str(), "->", v2.display())
-	v3, _ := read("(+ 33 a)")
+	v6, _, _ := read("+")
+	fmt.Println(v6.str(), "->", v6.display())
+	v3, _, _ := read("(+ 33 a)")
 	fmt.Println(v3.str(), "->", v3.display())
-	v4, _ := read("(+ 33 (+ a b))")
+	v4, _, _ := read("(+ 33 (+ a b))")
 	fmt.Println(v4.str(), "->", v4.display())
-	v5, _ := read("(this is my life)")
+	v5, _, _ := read("(this is my life)")
 	fmt.Println(v5.str(), "->", v5.display())
 }
 

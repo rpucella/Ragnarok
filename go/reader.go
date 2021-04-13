@@ -5,7 +5,7 @@ import "strings"
 import "regexp"
 
 func readToken(token string, s string) (string, string) {
-	r, _ := regexp.Compile(token)
+	r, _ := regexp.Compile(`^` + token)
 	ss := strings.TrimSpace(s)
 	match := r.FindStringIndex(ss)
 	if len(match) == 0 {
@@ -17,32 +17,73 @@ func readToken(token string, s string) (string, string) {
 	}
 }
 
-func readLP(s string) (string, string) {
+func readChar(c byte, s string) (bool, string) {
+	ss := strings.TrimSpace(s)
+	if len(ss) > 0 && ss[0] == c {
+		return true, ss[1:]
+	}
+	return false, s
+}
+
+// maybe these should return Values, with simply a Boolean for "token checkers"
+// like LP or RP?
+
+func readLP(s string) (bool, string) {
 	//fmt.Println("Trying to read as LP")
-	return readToken(`^\(`, s)
+	return readChar('(', s)
 }
 
-func readRP(s string) (string, string) {
+func readRP(s string) (bool, string) {
 	//fmt.Println("Trying to read as RP")
-	return readToken(`^\)`, s)
+	return readChar(')', s)
 }
 
-func readSymbol(s string) (string, string) {
+func readQuote(s string) (bool, string) {
+	return readChar('\'', s)
+}
+
+func readSymbol(s string) (Value, string) {
 	//fmt.Println("Trying to read as symbol")
-	return readToken(`^[^'()#\s]+`, s)
+	result, rest := readToken(`[^'()#\s]+`, s)
+	if result == "" {
+		return nil, s
+	}
+	return &VSymbol{result}, rest
 }
 
-func readInteger(s string) (string, string) {
+func readInteger(s string) (Value, string) {
 	//fmt.Println("Trying to read as integer")
-	return readToken(`^-?[0-9]+`, s)
+	result, rest := readToken(`-?[0-9]+`, s)
+	if result == "" {
+		return nil, s
+	}
+	num, _ := strconv.Atoi(result)
+	return &VInteger{num}, rest
 }
 
-func readList(s string) (Value, string) {
+func readBoolean(s string) (Value, string) {
+	// TODO: read all characters after # and then process
+	//       or treat # as a reader macro in some way?
+	result, rest := readToken(`#(?:t|T)`, s)
+	if result != "" {
+		return &VBoolean{true}, rest
+	}
+	result, rest = readToken(`#(?:f|F)`, s)
+	if result != "" {
+		return &VBoolean{false}, rest
+	}
+	return nil, s
+}
+
+func readList(s string) (Value, string, error) {
 	var rest string
 	var current *VCons
 	var result *VCons
 	var expr Value
-	expr, rest = read(s)
+	var err error
+	if expr, rest, err = read(s); err != nil {
+		return nil, s, err
+	}
 	for expr != nil {
 		if current == nil {
 			result = &VCons{head: expr, tail: &VEmpty{}}
@@ -52,34 +93,59 @@ func readList(s string) (Value, string) {
 			current.tail = temp
 			current = temp
 		}
-		expr, rest = read(rest)
-	}
-	if current == nil {
-		return &VEmpty{}, rest
-	}
-	return result, rest
-}
-
-func read(s string) (Value, string) {
-	//fmt.Println("Trying to read string", s)
-	var result, rest string
-	result, rest = readInteger(s)
-	if result != "" {
-		num, _ := strconv.Atoi(result)
-		return &VInteger{num}, rest
-	}
-	result, rest = readSymbol(s)
-	if result != "" {
-		return &VSymbol{result}, rest
-	}
-	result, rest = readLP(s)
-	if result != "" {
-		var exprs Value
-		exprs, rest = readList(rest)
-		result, rest = readRP(rest)
-		if result != "" {
-			return exprs, rest
+		expr, rest, err = read(rest)
+		if err != nil {
+			return nil, s, err
 		}
 	}
-	return nil, s
+	if current == nil {
+		return &VEmpty{}, rest, nil
+	}
+	return result, rest, nil
+}
+
+func read(s string) (Value, string, error) {
+	//fmt.Println("Trying to read string", s)
+	var resultB bool
+	var rest string
+	var result Value
+	var err error
+	result, rest = readInteger(s)
+	if result != nil {
+		return result, rest, nil
+	}
+	result, rest = readSymbol(s)
+	if result != nil {
+		return result, rest, nil
+	}
+	result, rest = readBoolean(s)
+	if result != nil {
+		return result, rest, nil
+	}
+	resultB, rest = readQuote(s)
+	if resultB {
+		var expr Value
+		expr, rest, err = read(rest)
+		if err != nil {
+			return nil, s, err
+		}
+		return &VCons{head: &VSymbol{"quote"}, tail: &VCons{head: expr, tail: &VEmpty{}}}, rest, nil
+	}
+	resultB, rest = readLP(s)
+	if resultB {
+		var exprs Value
+		exprs, rest, err = readList(rest)
+		if err != nil {
+			return nil, s, err
+		}
+		if exprs == nil {
+			return nil, s, nil
+		}
+		resultB, rest = readRP(rest)
+		if !resultB {
+			return nil, s, nil
+		}
+		return exprs, rest, nil
+	}
+	return nil, s, nil
 }

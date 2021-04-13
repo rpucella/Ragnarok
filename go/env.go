@@ -1,14 +1,28 @@
 package main
 
+import "errors"
+
 type Env struct {
-	current  map[string]Value
+	bindings map[string]Value
 	previous *Env
 }
 
-func (env *Env) lookup(name string) Value {
-	val, ok := env.current[name]
-	if !ok {
-		panic("Boom!")
+func (env *Env) lookup(name string) (Value, error) {
+	current := env
+	for current != nil {
+		val, ok := current.bindings[name]
+		if ok {
+			return val, nil
+		}
+		current = current.previous
 	}
-	return val
+	return nil, errors.New("no such identifier " + name)
+}
+
+func (env *Env) update(name string, v Value) {
+	env.bindings[name] = v
+}
+
+func newEnv(env *Env) (*Env) {
+	return &Env{bindings: map[string]Value{}, previous: env}
 }
