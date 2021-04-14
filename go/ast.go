@@ -1,6 +1,7 @@
 package main
 
 import "fmt"
+import "errors"
 
 const DEF_VALUE = 0
 const DEF_FUNCTION = 1
@@ -42,6 +43,13 @@ type Quote struct {
 
 type Function struct {
 	params []string
+	body AST
+}
+
+type LetRec struct {
+	names []string
+	params [][]string
+	bodies []AST
 	body AST
 }
 
@@ -114,5 +122,22 @@ func (e *Function) eval(env *Env) (Value, error) {
 
 func (e *Function) str() string {
 	return fmt.Sprintf("Function[?]")
+}
+
+func (e *LetRec) eval(env *Env) (Value, error) {
+	if len(e.names) != len(e.params) || len(e.names) != len(e.bodies) {
+		return nil, errors.New("malformed letrec (names, params, bodies)")
+	}
+	// create the environment that we'll share across the definitions
+	// all names initially allocated #nil
+	new_env := env.layer(e.names, nil)
+	for i, name := range e.names {
+		new_env.update(name, &VFunction{e.params[i], e.bodies[i], new_env})
+	}
+	return e.body.eval(new_env)
+}
+
+func (e *LetRec) str() string {
+	return fmt.Sprintf("LetRec[? %s]", e.body)
 }
 

@@ -3,7 +3,6 @@ package main
 import "errors"
 
 const kw_DEF string = "def"
-const kw_CONST string = "const"
 const kw_VAR string = "var"
 const kw_MACRO string = "macro"
 const kw_LET string = "let"
@@ -86,6 +85,14 @@ func parseExpr(sexp Value) (AST, error) {
 		return expr, err
 	}
 	expr, err = parseFunction(sexp)
+	if err != nil || expr != nil {
+		return expr, err
+	}
+	expr, err = parseLet(sexp)
+	if err != nil || expr != nil {
+		return expr, err
+	}
+	expr, err = parseLetRec(sexp)
 	if err != nil || expr != nil {
 		return expr, err
 	}
@@ -197,6 +204,141 @@ func parseFunction(sexp Value) (AST, error) {
 		return nil, errors.New("too many arguments to fun")
 	}
 	return &Function{params, body}, nil
+}
+
+func parseLet(sexp Value) (AST, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isLet := parseKeyword(kw_LET, sexp.headValue())
+	if !isLet {
+		return nil, nil
+	}
+	next := sexp.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("too few arguments to let")
+	}
+	params, bindings, err := parseBindings(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	next = next.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("too few arguments to let")
+	}
+	body, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	if !next.tailValue().isEmpty() {
+		return nil, errors.New("too many arguments to let")
+	}
+	return makeLet(params, bindings, body), nil
+}
+
+func parseLetRec(sexp Value) (AST, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isLetRec := parseKeyword(kw_LETREC, sexp.headValue())
+	if !isLetRec {
+		return nil, nil
+	}
+	next := sexp.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("too few arguments to letrec")
+	}
+	names, params, bodies, err := parseFunBindings(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	next = next.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("too few arguments to letrec")
+	}
+	body, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	if !next.tailValue().isEmpty() {
+		return nil, errors.New("too many arguments to letrec")
+	}
+	return &LetRec{names, params, bodies, body}, nil
+}
+
+func parseBindings(sexp Value) ([]string, []AST, error) {
+	params := make([]string, 0)
+	bindings := make([]AST, 0)
+	current := sexp
+	for current.isCons() {
+		if !current.headValue().isCons() {
+			return nil, nil, errors.New("expected binding (name expr)")
+		}
+		if !current.headValue().headValue().isSymbol() {
+			return nil, nil, errors.New("expected name in binding")
+		}
+		params = append(params, current.headValue().headValue().strValue())
+		if !current.headValue().tailValue().isCons() {
+			return nil, nil, errors.New("expected expr in binding")
+		}
+		if !current.headValue().tailValue().tailValue().isEmpty() {
+			return nil, nil, errors.New("too many elements in binding")
+		}
+		binding, err := parseExpr(current.headValue().tailValue().headValue())
+		if err != nil {
+			return nil, nil, err
+		}
+		bindings = append(bindings, binding)
+		current = current.tailValue()
+	}
+	if !current.isEmpty() {
+		return nil, nil, errors.New("malformed binding list")
+	}
+	return params, bindings, nil
+}
+
+func parseFunBindings(sexp Value) ([]string, [][]string, []AST, error) {
+	names := make([]string, 0)
+	params := make([][]string, 0)
+	bodies := make([]AST, 0)
+	current := sexp
+	for current.isCons() {
+		if !current.headValue().isCons() {
+			return nil, nil, nil, errors.New("expected binding (name params expr)")
+		}
+		if !current.headValue().headValue().isSymbol() {
+			return nil, nil, nil, errors.New("expected name in binding")
+		}
+		names = append(names, current.headValue().headValue().strValue())
+		if !current.headValue().tailValue().isCons() {
+			return nil, nil, nil, errors.New("expected params in binding")
+		}
+		these_params, err := parseSymbols(current.headValue().tailValue().headValue())
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		params = append(params, these_params)
+		if !current.headValue().tailValue().tailValue().isCons() {
+			return nil, nil, nil, errors.New("expected expr in binding")
+		}
+		if !current.headValue().tailValue().tailValue().tailValue().isEmpty() {
+			return nil, nil, nil, errors.New("too many elements in binding")
+		}
+		body, err := parseExpr(current.headValue().tailValue().tailValue().headValue())
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		bodies = append(bodies, body)
+		current = current.tailValue()
+	}
+	if !current.isEmpty() {
+		return nil, nil, nil, errors.New("malformed binding list")
+	}
+	return names, params, bodies, nil
+}
+
+func makeLet(params []string, bindings []AST, body AST) AST {
+	return &Apply{&Function{params, body}, bindings}
 }
 
 func parseApply(sexp Value) (AST, error) {
