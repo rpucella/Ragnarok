@@ -2,8 +2,12 @@ package main
 
 import "fmt"
 
+const DEF_VALUE = 0
+const DEF_FUNCTION = 1
+
 type Def struct {
 	name string
+	typ int
 	params []string
 	body AST
 }

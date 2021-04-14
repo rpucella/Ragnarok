@@ -38,8 +38,22 @@ func shell() {
 			continue
 		}
 		if d != nil {
-			env.update(d.name, &VFunction{d.params, d.body, env})
-			fmt.Println(d.name)
+			if d.typ == DEF_FUNCTION { 
+				env.update(d.name, &VFunction{d.params, d.body, env})
+				fmt.Println(d.name)
+				continue
+			}
+			if d.typ == DEF_VALUE {
+				v, err := d.body.eval(env)
+				if err != nil {
+					fmt.Println("EVAL -", err.Error())
+					continue
+				}
+				env.update(d.name, v)
+				fmt.Println(d.name)
+				continue
+			}
+			fmt.Println("DECLARE - unknow declaration type", d.typ)
 			continue
 		}
 		// check if it's an expression

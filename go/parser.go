@@ -29,32 +29,47 @@ func parseDef(sexp Value) (*Def, error) {
 	}
 	next := sexp.tailValue()
 	if !next.isCons() {
-		return nil, errors.New("Too few arguments to def")
+		return nil, errors.New("too few arguments to def")
 	}
 	defBlock := next.headValue()
-	if !defBlock.isCons() {
-		return nil, errors.New("No definition name in def?")
+	if defBlock.isSymbol() {
+		name := defBlock.strValue()
+		next = next.tailValue()
+		if !next.isCons() {
+			return nil, errors.New("too few arguments to def")
+		}
+		value, err := parseExpr(next.headValue())
+		if err != nil {
+			return nil, err
+		}
+		if !next.tailValue().isEmpty() {
+			return nil, errors.New("too many arguments to def")
+		}
+		return &Def{name, DEF_VALUE, nil, value}, nil
+	}		
+	if defBlock.isCons() {
+		if !defBlock.headValue().isSymbol() { 
+			return nil, errors.New("definition name not a symbol")
+		}
+		name := defBlock.headValue().strValue()
+		params, err := parseSymbols(defBlock.tailValue())
+		if err != nil {
+			return nil, err
+		}
+		next = next.tailValue()
+		if !next.isCons() {
+			return nil, errors.New("too few arguments to def")
+		}
+		body, err := parseExpr(next.headValue())
+		if err != nil {
+			return nil, err
+		}
+		if !next.tailValue().isEmpty() {
+			return nil, errors.New("too many arguments to def")
+		}
+		return &Def{name, DEF_FUNCTION, params, body}, nil
 	}
-	if !defBlock.headValue().isSymbol() { 
-		return nil, errors.New("Definition name not a symbol")
-	}
-	name := defBlock.headValue().strValue()
-	params, err := parseSymbols(defBlock.tailValue())
-	if err != nil {
-		return nil, err
-	}
-	next = next.tailValue()
-	if !next.isCons() {
-		return nil, errors.New("Too few arguments to def")
-	}
-	body, err := parseExpr(next.headValue())
-	if err != nil {
-		return nil, err
-	}
-	if !next.tailValue().isEmpty() {
-		return nil, errors.New("Too many arguments to def")
-	}
-	return &Def{name, params, body}, nil
+	return nil, errors.New("malformed def")
 }
 
 func parseExpr(sexp Value) (AST, error) {
@@ -108,10 +123,10 @@ func parseQuote(sexp Value) (AST, error) {
 	}
 	next := sexp.tailValue()
 	if !next.isCons() {
-		return nil, errors.New("Malformed quote")
+		return nil, errors.New("malformed quote")
 	}
 	if !next.tailValue().isEmpty() {
-		return nil, errors.New("Too many arguments to quote")
+		return nil, errors.New("too many arguments to quote")
 	}
 	return &Quote{next.headValue()}, nil
 }
@@ -126,7 +141,7 @@ func parseIf(sexp Value) (AST, error) {
 	}
 	next := sexp.tailValue()
 	if !next.isCons() {
-		return nil, errors.New("Too few arguments to if")
+		return nil, errors.New("too few arguments to if")
 	}
 	cnd, err := parseExpr(next.headValue())
 	if err != nil {
@@ -134,7 +149,7 @@ func parseIf(sexp Value) (AST, error) {
 	}
 	next = next.tailValue()
 	if !next.isCons() {
-		return nil, errors.New("Too few arguments to if")
+		return nil, errors.New("too few arguments to if")
 	}
 	thn, err := parseExpr(next.headValue())
 	if err != nil {
@@ -142,14 +157,14 @@ func parseIf(sexp Value) (AST, error) {
 	}
 	next = next.tailValue()
 	if !next.isCons() {
-		return nil, errors.New("Too few arguments to if")
+		return nil, errors.New("too few arguments to if")
 	}
 	els, err := parseExpr(next.headValue())
 	if err != nil {
 		return nil, err
 	}
 	if !next.tailValue().isEmpty() {
-		return nil, errors.New("Too many arguments to if")
+		return nil, errors.New("too many arguments to if")
 	}
 	return &If{cnd, thn, els}, nil
 }
@@ -164,7 +179,7 @@ func parseFunction(sexp Value) (AST, error) {
 	}
 	next := sexp.tailValue()
 	if !next.isCons() {
-		return nil, errors.New("Too few arguments to fun")
+		return nil, errors.New("too few arguments to fun")
 	}
 	params, err := parseSymbols(next.headValue())
 	if err != nil {
@@ -172,14 +187,14 @@ func parseFunction(sexp Value) (AST, error) {
 	}
 	next = next.tailValue()
 	if !next.isCons() {
-		return nil, errors.New("Too few arguments to fun")
+		return nil, errors.New("too few arguments to fun")
 	}
 	body, err := parseExpr(next.headValue())
 	if err != nil {
 		return nil, err
 	}
 	if !next.tailValue().isEmpty() {
-		return nil, errors.New("Too many arguments to fun")
+		return nil, errors.New("too many arguments to fun")
 	}
 	return &Function{params, body}, nil
 }
@@ -217,7 +232,7 @@ func parseExprs(sexp Value) ([]AST, error) {
 		current = current.tailValue()
 	}
 	if !current.isEmpty() {
-		return nil, errors.New("Malformed expression list")
+		return nil, errors.New("malformed expression list")
 	}
 	return args, nil
 }
@@ -227,13 +242,13 @@ func parseSymbols(sexp Value) ([]string, error) {
 	current := sexp
 	for current.isCons() {
 		if !current.headValue().isSymbol() {
-			return nil, errors.New("Expected symbol in list")
+			return nil, errors.New("expected symbol in list")
 		}
 		params = append(params, current.headValue().strValue())
 		current = current.tailValue()
 	}
 	if !current.isEmpty() {
-		return nil, errors.New("Malformed symbol list")
+		return nil, errors.New("malformed symbol list")
 	}
 	return params, nil
 }
