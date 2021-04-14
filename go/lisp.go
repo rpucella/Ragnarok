@@ -38,7 +38,8 @@ func shell() {
 			continue
 		}
 		if d != nil {
-			fmt.Println("DECLARATION!", d)
+			env.update(d.name, &VFunction{d.params, d.body, env})
+			fmt.Println(d.name)
 			continue
 		}
 		// check if it's an expression
