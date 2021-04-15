@@ -1,6 +1,7 @@
 package main
 
 import "errors"
+import "fmt"
 
 const kw_DEF string = "def"
 const kw_VAR string = "var"
@@ -17,6 +18,15 @@ const kw_QUOTE string = "quote"
 const kw_DICT string = "dict"
 const kw_AND string = "and"
 const kw_OR string = "or"
+
+var fresh = (func(init int) func(string)string { 
+	id := init
+	return func(prefix string) string {
+		result := fmt.Sprintf("%s_%d", prefix, id)
+		id += 1
+		return result
+	}
+})(0)
 
 func parseDef(sexp Value) (*Def, error) {
 	if !sexp.isCons() {
@@ -203,7 +213,7 @@ func parseFunction(sexp Value) (AST, error) {
 	if !next.tailValue().isEmpty() {
 		return nil, errors.New("too many arguments to fun")
 	}
-	return &Function{params, body}, nil
+	return makeFunction(params, body), nil
 }
 
 func parseLet(sexp Value) (AST, error) {
@@ -338,7 +348,12 @@ func parseFunBindings(sexp Value) ([]string, [][]string, []AST, error) {
 }
 
 func makeLet(params []string, bindings []AST, body AST) AST {
-	return &Apply{&Function{params, body}, bindings}
+	return &Apply{makeFunction(params, body), bindings}
+}
+
+func makeFunction(params []string, body AST) AST {
+	name := fresh("__temp")
+	return &LetRec{[]string{name}, [][]string{params}, []AST{body}, &Id{name}}
 }
 
 func parseApply(sexp Value) (AST, error) {

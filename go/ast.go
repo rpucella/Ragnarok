@@ -41,11 +41,6 @@ type Quote struct {
 	val Value
 }
 
-type Function struct {
-	params []string
-	body AST
-}
-
 type LetRec struct {
 	names []string
 	params [][]string
@@ -114,14 +109,6 @@ func (e *Quote) eval(env *Env) (Value, error) {
 
 func (e *Quote) str() string {
 	return fmt.Sprintf("Quote[%s]", e.val.str())
-}
-
-func (e *Function) eval(env *Env) (Value, error) {
-	return &VFunction{e.params, e.body, env}, nil
-}
-
-func (e *Function) str() string {
-	return fmt.Sprintf("Function[?]")
 }
 
 func (e *LetRec) eval(env *Env) (Value, error) {

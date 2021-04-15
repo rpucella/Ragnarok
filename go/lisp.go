@@ -62,6 +62,7 @@ func shell() {
 			fmt.Println("PARSE -", err.Error())
 			continue
 		}
+		fmt.Println("expr =", e.str())
 		v, err = e.eval(env)
 		if err != nil {
 			fmt.Println("EVAL -", err.Error())
