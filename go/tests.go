@@ -14,12 +14,28 @@ func test() {
 	test_read()
 }
 
+func primitiveAdd(args []Value) (Value, error) {
+	var result int
+	for _, val := range args {
+		result += val.intValue()
+	}
+	return &VInteger{result}, nil
+}
+
+func primitiveMult(args []Value) (Value, error) {
+	var result int = 1
+	for _, val := range args {
+		result *= val.intValue()
+	}
+	return &VInteger{result}, nil
+}
+
 func sampleEnv() *Env {
 	current := map[string]Value{
 		"a": &VInteger{10},
 		"b": &VInteger{20},
-		"+": &VPrimitive{"+", primitiveAdd, 0},
-		"*": &VPrimitive{"*", primitiveMult, 0},
+		"+": &VPrimitive{"+", primitiveAdd},
+		"*": &VPrimitive{"*", primitiveMult},
 		"t": &VBoolean{true},
 		"f": &VBoolean{false},
 	}
@@ -36,7 +52,7 @@ func test_value_plus() {
 	var v1 Value = &VInteger{10}
 	var v2 Value = &VInteger{20}
 	var v3 Value = &VInteger{30}
-	var vp Value = &VPrimitive{"+", primitiveAdd, 0}
+	var vp Value = &VPrimitive{"+", primitiveAdd}
 	var args []Value = []Value{v1, v2, v3}
 	vr, _ := vp.apply(args)
 	fmt.Println(vp.str(), "->", vr.intValue())

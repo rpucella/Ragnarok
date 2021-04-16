@@ -18,6 +18,7 @@ type Value interface {
 	isEmpty() bool
 	isTrue() bool
 	isNil() bool
+	typ() string
 }
 
 type VInteger struct {
@@ -30,8 +31,7 @@ type VBoolean struct {
 
 type VPrimitive struct {
 	name      string
-	primitive func([]Value) Value
-	numArgs   int
+	primitive func([]Value) (Value, error)
 }
 
 type VEmpty struct {
@@ -120,6 +120,10 @@ func (v *VInteger) isNil() bool {
 	return false
 }
 
+func (v *VInteger) typ() string {
+	return "int"
+}
+
 func (v *VBoolean) display() string {
 	if v.val {
 		return "#t"
@@ -188,6 +192,10 @@ func (v *VBoolean) isNil() bool {
 	return false
 }
 
+func (v *VBoolean) typ() string {
+	return "bool"
+}
+
 func (v *VPrimitive) display() string {
 	return fmt.Sprintf("#<PRIMITIVE %s>", v.name)
 }
@@ -209,8 +217,7 @@ func (v *VPrimitive) boolValue() bool {
 }
 
 func (v *VPrimitive) apply(args []Value) (Value, error) {
-	// check length?
-	return v.primitive(args), nil
+	return v.primitive(args)
 }
 
 func (v *VPrimitive) str() string {
@@ -247,6 +254,10 @@ func (v *VPrimitive) isTrue() bool {
 
 func (v *VPrimitive) isNil() bool {
 	return false
+}
+
+func (v *VPrimitive) typ() string {
+	return "fun"
 }
 
 func (v *VEmpty) display() string {
@@ -309,6 +320,10 @@ func (v *VEmpty) isNil() bool {
 	return false
 }
 
+func (v *VEmpty) typ() string {
+	return "list"
+}
+
 func (v *VCons) display() string {
 	return "(" + v.head.display() + v.tail.displayCDR()
 }
@@ -369,6 +384,10 @@ func (v *VCons) isNil() bool {
 	return false
 }
 
+func (v *VCons) typ() string {
+	return "list"
+}
+
 func (v *VSymbol) display() string {
 	return v.name
 }
@@ -427,6 +446,10 @@ func (v *VSymbol) isTrue() bool {
 
 func (v *VSymbol) isNil() bool {
 	return false
+}
+
+func (v *VSymbol) typ() string {
+	return "symbol"
 }
 
 func (v *VFunction) display() string {
@@ -493,6 +516,10 @@ func (v *VFunction) isNil() bool {
 	return false
 }
 
+func (v *VFunction) typ() string {
+	return "fun"
+}
+
 func (v *VString) display() string {
 	return "\"" + v.val + "\""
 }
@@ -551,6 +578,10 @@ func (v *VString) isTrue() bool {
 
 func (v *VString) isNil() bool {
 	return false
+}
+
+func (v *VString) typ() string {
+	return "string"
 }
 
 func (v *VNil) display() string {
@@ -612,4 +643,8 @@ func (v *VNil) isTrue() bool {
 
 func (v *VNil) isNil() bool {
 	return true
+}
+
+func (v *VNil) typ() string {
+	return "nil"
 }

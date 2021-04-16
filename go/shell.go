@@ -6,13 +6,11 @@ import "os"
 import "strings"
 
 func shell() {
-	env := makeEnv(map[string]Value{
-		"+": &VPrimitive{"+", primitiveAdd, 0},
-		"*": &VPrimitive{"*", primitiveMult, 0},
-		"true": &VBoolean{true},
-		"false": &VBoolean{false},
-	})
+	bindings := primitivesBindings()
+	bindings["true"] = &VBoolean{true}
+	bindings["false"] = &VBoolean{false}
 	reader := bufio.NewReader(os.Stdin)
+	env := makeEnv(bindings)
 	for {
 		fmt.Print("> ")
 		text, _ := reader.ReadString('\n')
@@ -55,7 +53,7 @@ func shell() {
 			fmt.Println("PARSE -", err.Error())
 			continue
 		}
-		fmt.Println("expr =", e.str())
+		///fmt.Println("expr =", e.str())
 		v, err = e.eval(env)
 		if err != nil {
 			fmt.Println("EVAL -", err.Error())
