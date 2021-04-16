@@ -44,3 +44,7 @@ func (env *Env) layer(names []string, values []Value) *Env {
 	return &Env{bindings: bindings, previous: env}
 }
 
+func makeEnv(bindings map[string]Value) *Env {
+	return &Env{bindings: bindings, previous: nil}
+}
+

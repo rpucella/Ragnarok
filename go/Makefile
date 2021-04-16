@@ -1,2 +1,2 @@
 build:
-	go build -o lisp *.go
+	go build -o ragnarok *.go
