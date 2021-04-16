@@ -4,17 +4,16 @@ import "errors"
 import "fmt"
 
 const kw_DEF string = "def"
-const kw_VAR string = "var"
-const kw_MACRO string = "macro"
 const kw_LET string = "let"
-const kw_LETS string = "let*"
+const kw_LETSTAR string = "let*"
 const kw_LETREC string = "letrec"
 const kw_LOOP string = "let"
 const kw_IF string = "if"
 const kw_FUN string = "fun"
-const kw_FUNREC string = "rec"
-const kw_DO string = "do"
 const kw_QUOTE string = "quote"
+const kw_DO string = "do"
+
+const kw_MACRO string = "macro"
 const kw_DICT string = "dict"
 const kw_AND string = "and"
 const kw_OR string = "or"
@@ -102,7 +101,15 @@ func parseExpr(sexp Value) (AST, error) {
 	if err != nil || expr != nil {
 		return expr, err
 	}
+	expr, err = parseLetStar(sexp)
+	if err != nil || expr != nil {
+		return expr, err
+	}
 	expr, err = parseLetRec(sexp)
+	if err != nil || expr != nil {
+		return expr, err
+	}
+	expr, err = parseDo(sexp)
 	if err != nil || expr != nil {
 		return expr, err
 	}
@@ -198,6 +205,11 @@ func parseFunction(sexp Value) (AST, error) {
 	if !next.isCons() {
 		return nil, errors.New("too few arguments to fun")
 	}
+	if next.headValue().isSymbol() {
+		// we need to parse as a recursive function
+		// restart from scratch
+		return parseRecFunction(sexp)
+	}
 	params, err := parseSymbols(next.headValue())
 	if err != nil {
 		return nil, err
@@ -214,6 +226,39 @@ func parseFunction(sexp Value) (AST, error) {
 		return nil, errors.New("too many arguments to fun")
 	}
 	return makeFunction(params, body), nil
+}
+
+func parseRecFunction(sexp Value) (AST, error) {
+	fmt.Println("Trying to parse as rec function")
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isFun := parseKeyword(kw_FUN, sexp.headValue())
+	if !isFun {
+		return nil, nil
+	}
+	next := sexp.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("too few arguments to fun")
+	}
+	recName := next.headValue().strValue()
+	next = next.tailValue()
+	params, err := parseSymbols(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	next = next.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("too few arguments to fun")
+	}
+	body, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	if !next.tailValue().isEmpty() {
+		return nil, errors.New("too many arguments to fun")
+	}
+	return makeRecFunction(recName, params, body), nil
 }
 
 func parseLet(sexp Value) (AST, error) {
@@ -244,6 +289,36 @@ func parseLet(sexp Value) (AST, error) {
 		return nil, errors.New("too many arguments to let")
 	}
 	return makeLet(params, bindings, body), nil
+}
+
+func parseLetStar(sexp Value) (AST, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isLet := parseKeyword(kw_LETSTAR, sexp.headValue())
+	if !isLet {
+		return nil, nil
+	}
+	next := sexp.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("too few arguments to let*")
+	}
+	params, bindings, err := parseBindings(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	next = next.tailValue()
+	if !next.isCons() {
+		return nil, errors.New("too few arguments to let*")
+	}
+	body, err := parseExpr(next.headValue())
+	if err != nil {
+		return nil, err
+	}
+	if !next.tailValue().isEmpty() {
+		return nil, errors.New("too many arguments to let*")
+	}
+	return makeLetStar(params, bindings, body), nil
 }
 
 func parseLetRec(sexp Value) (AST, error) {
@@ -351,9 +426,21 @@ func makeLet(params []string, bindings []AST, body AST) AST {
 	return &Apply{makeFunction(params, body), bindings}
 }
 
+func makeLetStar(params []string, bindings []AST, body AST) AST {
+	result := body
+	for i := len(params) - 1; i >= 0; i-- {
+		result = makeLet([]string{params[i]}, []AST{bindings[i]}, result)
+	}
+	return result
+}
+
 func makeFunction(params []string, body AST) AST {
 	name := fresh("__temp")
 	return &LetRec{[]string{name}, [][]string{params}, []AST{body}, &Id{name}}
+}
+
+func makeRecFunction(recName string, params []string, body AST) AST {
+	return &LetRec{[]string{recName}, [][]string{params}, []AST{body}, &Id{recName}}
 }
 
 func parseApply(sexp Value) (AST, error) {
@@ -408,4 +495,30 @@ func parseSymbols(sexp Value) ([]string, error) {
 		return nil, errors.New("malformed symbol list")
 	}
 	return params, nil
+}
+
+func parseDo(sexp Value) (AST, error) {
+	if !sexp.isCons() {
+		return nil, nil
+	}
+	isDo := parseKeyword(kw_DO, sexp.headValue())
+	if !isDo {
+		return nil, nil
+	}
+	exprs, err := parseExprs(sexp.tailValue())
+	if err != nil {
+		return nil, err
+	}
+	return makeDo(exprs), nil
+}
+
+func makeDo(exprs []AST) AST {
+	if len(exprs) > 0 {
+		result := exprs[len(exprs) - 1]
+		for i := len(exprs) - 2; i >= 0; i-- {
+			result = makeLet([]string{fresh("__temp")}, []AST{exprs[i]}, result)
+		}
+		return result
+	}
+	return &Literal{&VNil{}}
 }

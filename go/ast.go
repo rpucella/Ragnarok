@@ -2,6 +2,7 @@ package main
 
 import "fmt"
 import "errors"
+import "strings"
 
 const DEF_VALUE = 0
 const DEF_FUNCTION = 1
@@ -125,6 +126,11 @@ func (e *LetRec) eval(env *Env) (Value, error) {
 }
 
 func (e *LetRec) str() string {
-	return fmt.Sprintf("LetRec[? %s]", e.body)
+	bindings := make([]string, len(e.names))
+	for i := range e.names {
+		params := strings.Join(e.params[i], " ")
+		bindings[i] = fmt.Sprintf("[%s [%s] %s]", e.names[i], params, e.bodies[i].str())
+	}
+	return fmt.Sprintf("LetRec[%s %s]", strings.Join(bindings, " "), e.body.str())
 }
 
