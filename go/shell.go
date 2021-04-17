@@ -76,12 +76,11 @@ func bail() {
 
 func initialize() *Ecosystem {
 	eco := mkEcosystem()
-	bindings := corePrimitives()
-	bindings["true"] = &VBoolean{true}
-	bindings["false"] = &VBoolean{false}
-	coreEnv := mkEnv(bindings, eco)
-	eco.add("core", coreEnv)
-	testEnv := mkEnv(map[string]Value{
+	coreBindings := corePrimitives()
+	coreBindings["true"] = &VBoolean{true}
+	coreBindings["false"] = &VBoolean{false}
+	eco.mkEnv("core", coreBindings)
+	testBindings := map[string]Value{
 		"a": &VInteger{99},
 		"square": &VPrimitive{"square", func(args []Value) (Value, error) {
 			if len(args) != 1 || !args[0].isNumber() {
@@ -89,9 +88,9 @@ func initialize() *Ecosystem {
 			}
 			return &VInteger{args[0].intValue() * args[0].intValue()}, nil
 		}},
-	}, eco)
-	eco.add("test", testEnv)
-	shellEnv := mkEnv(map[string]Value{
+	}
+	eco.mkEnv("test", testBindings)
+	shellBindings := map[string]Value{
 		"quit": &VPrimitive{"quit", func(args []Value) (Value, error) {
 			if len(args) > 0 {
 				return nil, fmt.Errorf("too many arguments 0 to primitive quit")
@@ -99,7 +98,7 @@ func initialize() *Ecosystem {
 			bail()
 			return nil, nil
 		}},
-	}, eco)
-	eco.add("shell", shellEnv)
+	}
+	eco.mkEnv("shell", shellBindings)
 	return eco
 }

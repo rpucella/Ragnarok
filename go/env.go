@@ -50,7 +50,3 @@ func (env *Env) layer(names []string, values []Value) *Env {
 	return &Env{bindings: bindings, previous: env, ecosystem: env.ecosystem}
 }
 
-func mkEnv(bindings map[string]Value, eco *Ecosystem) *Env {
-	return &Env{bindings: bindings, previous: nil, ecosystem: eco}
-}
-
