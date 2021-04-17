@@ -107,6 +107,10 @@ func isList(v Value) bool {
 	return v.typ() == "list"
 }
 
+func isReference(v Value) bool {
+	return v.typ() == "ref"
+}
+
 func mkNumPredicate(pred func(int, int)bool) func(string, []Value)(Value, error) {
 	return func(name string, args []Value) (Value, error) {
 		if err := checkExactArgs(name, args, 2); err != nil {
@@ -557,7 +561,88 @@ var PRIMITIVES = []PrimitiveDesc{
 			return result, nil
 		},
 	},
+
+	PrimitiveDesc{"ref", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VReference{args[0]}, nil
+		},
+	},
+
+	// set should probably be a special form
+	// (set (x) 10)
+	// (set (arr 1) 10)
+	// (set (dict 'a) 10)
+	// like setf in CLISP
 	
+	PrimitiveDesc{"set", 2, 2,
+		func(name string, args []Value) (Value, error) {
+			if err := checkArgType(name, args[0], isReference); err != nil {
+				return nil, err
+			}
+			args[0].setValue(args[1])
+			return &VNil{}, nil
+		},
+	},
+	
+	PrimitiveDesc{"empty?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isEmpty()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"cons?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isCons()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"list?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isCons() || args[0].isEmpty()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"number?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isNumber()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"ref?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isRef()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"boolean?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isBool()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"string?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isString()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"symbol?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isSymbol()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"function?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isFunction()}, nil
+		},
+	},
+	
+	PrimitiveDesc{"nil?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isNil()}, nil
+		},
+	},
 }
 
 func allConses(vs []Value) bool {
@@ -573,6 +658,5 @@ func allConses(vs []Value) bool {
 // left:
 //
 // eq? and equal?   (or maybe same? and eq? or maybe eq? is just =?) should we make = etc generic?
-// various type predicates (nil? etc)
-// references
-// dictionaries #((a 1) (b 2))  arrays #[a b c]
+// dictionaries #((a 1) (b 2))
+// arrays #[a b c]

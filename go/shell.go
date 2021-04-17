@@ -4,6 +4,7 @@ import "fmt"
 import "bufio"
 import "os"
 import "strings"
+import "io"
 
 func shell() {
 	bindings := corePrimitives()
@@ -13,7 +14,14 @@ func shell() {
 	env := mkEnv(bindings)
 	for {
 		fmt.Print("> ")
-		text, _ := reader.ReadString('\n')
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				fmt.Println()
+				bail()
+			}
+			fmt.Println("IO ERROR - ", err.Error())
+		}
 		if strings.TrimSpace(text) == "" {
 			continue
 		}
@@ -61,4 +69,9 @@ func shell() {
 		}
 		fmt.Println(v.display())
 	}
+}
+
+func bail() {
+	fmt.Println("tada")
+	os.Exit(0)
 }

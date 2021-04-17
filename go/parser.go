@@ -229,7 +229,6 @@ func parseFunction(sexp Value) (AST, error) {
 }
 
 func parseRecFunction(sexp Value) (AST, error) {
-	fmt.Println("Trying to parse as rec function")
 	if !sexp.isCons() {
 		return nil, nil
 	}
