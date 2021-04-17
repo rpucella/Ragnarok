@@ -6,14 +6,12 @@ import "os"
 import "strings"
 import "io"
 
-func shell() {
-	bindings := corePrimitives()
-	bindings["true"] = &VBoolean{true}
-	bindings["false"] = &VBoolean{false}
+func shell(eco *Ecosystem) {
+	currentModule := "core"
+	env, _ := eco.get(currentModule)
 	reader := bufio.NewReader(os.Stdin)
-	env := mkEnv(bindings)
 	for {
-		fmt.Print("> ")
+		fmt.Printf("%s> ", currentModule)
 		text, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -74,4 +72,34 @@ func shell() {
 func bail() {
 	fmt.Println("tada")
 	os.Exit(0)
+}
+
+func initialize() *Ecosystem {
+	eco := mkEcosystem()
+	bindings := corePrimitives()
+	bindings["true"] = &VBoolean{true}
+	bindings["false"] = &VBoolean{false}
+	coreEnv := mkEnv(bindings, eco)
+	eco.add("core", coreEnv)
+	testEnv := mkEnv(map[string]Value{
+		"a": &VInteger{99},
+		"square": &VPrimitive{"square", func(args []Value) (Value, error) {
+			if len(args) != 1 || !args[0].isNumber() {
+				return nil, fmt.Errorf("argument to square missing or not int")
+			}
+			return &VInteger{args[0].intValue() * args[0].intValue()}, nil
+		}},
+	}, eco)
+	eco.add("test", testEnv)
+	shellEnv := mkEnv(map[string]Value{
+		"quit": &VPrimitive{"quit", func(args []Value) (Value, error) {
+			if len(args) > 0 {
+				return nil, fmt.Errorf("too many arguments 0 to primitive quit")
+			}
+			bail()
+			return nil, nil
+		}},
+	}, eco)
+	eco.add("shell", shellEnv)
+	return eco
 }

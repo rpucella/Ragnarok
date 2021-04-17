@@ -1,13 +1,26 @@
 package main
 
-import "errors"
+import "fmt"
+import "strings"
 
 type Env struct {
 	bindings map[string]Value
 	previous *Env
+	ecosystem *Ecosystem
 }
 
 func (env *Env) lookup(name string) (Value, error) {
+	if strings.Contains(name, ":") {
+		subnames := strings.Split(name, ":")
+		if len(subnames) > 2 {
+			return nil, fmt.Errorf("multiple qualifiers in %s", name)
+		}
+		moduleEnv, ok := env.ecosystem.modulesEnv[subnames[0]]
+		if !ok {
+			return nil, fmt.Errorf("unknown module %s", subnames[0])
+		}
+		return moduleEnv.lookup(subnames[1])
+	}
 	current := env
 	for current != nil {
 		val, ok := current.bindings[name]
@@ -16,7 +29,7 @@ func (env *Env) lookup(name string) (Value, error) {
 		}
 		current = current.previous
 	}
-	return nil, errors.New("no such identifier " + name)
+	return nil, fmt.Errorf("no such identifier %s", name)
 }
 
 func (env *Env) update(name string, v Value) {
@@ -34,10 +47,10 @@ func (env *Env) layer(names []string, values []Value) *Env {
 			bindings[name] = &VNil{}
 		}
 	}
-	return &Env{bindings: bindings, previous: env}
+	return &Env{bindings: bindings, previous: env, ecosystem: env.ecosystem}
 }
 
-func mkEnv(bindings map[string]Value) *Env {
-	return &Env{bindings: bindings, previous: nil}
+func mkEnv(bindings map[string]Value, eco *Ecosystem) *Env {
+	return &Env{bindings: bindings, previous: nil, ecosystem: eco}
 }
 

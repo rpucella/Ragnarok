@@ -658,5 +658,6 @@ func allConses(vs []Value) bool {
 // left:
 //
 // eq? and equal?   (or maybe same? and eq? or maybe eq? is just =?) should we make = etc generic?
-// dictionaries #((a 1) (b 2))
+// dictionaries #((a 1) (b 2))  (dict '(a 10) '(b 20) '(c 30))  vs (apply dict '((a 10) (b 20) (c 30)))?
 // arrays #[a b c]
+// tail recursion in eval loop!
