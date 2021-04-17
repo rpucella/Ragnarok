@@ -34,6 +34,9 @@ func listAppend (v1 Value, v2 Value) Value {
 		}
 		current_result = cell
 	}
+	if current_result == nil {
+		return v2
+	}
 	current_result.tail = v2
 	return result
 }
@@ -412,4 +415,164 @@ var PRIMITIVES = []PrimitiveDesc{
 		},
 	},
 
+	PrimitiveDesc{"map", 2, -1,
+		func(name string, args []Value) (Value, error) {
+			if err := checkArgType(name, args[0], isFunction); err != nil {
+				return nil, err
+			}
+			for i := range args[1:] {
+				if err := checkArgType(name, args[i + 1], isList); err != nil {
+					return nil, err
+				}
+			}
+			var result Value = nil
+			var current_result *VCons = nil
+			currents := make([]Value, len(args) - 1)
+			firsts := make([]Value, len(args) - 1)
+			for i := range args[1:] {
+				currents[i] = args[i + 1]
+			}
+			for allConses(currents) {
+				for i := range currents {
+					firsts[i] = currents[i].headValue()
+				}
+				v, err := args[0].apply(firsts)
+				if err != nil {
+					return nil, err
+				}
+				cell := &VCons{head: v, tail: nil}
+				if current_result == nil {
+					result = cell
+				} else {
+					current_result.tail = cell
+				}
+				current_result = cell
+				for i := range currents {
+					currents[i] = currents[i].tailValue()
+				}
+			}
+			if current_result == nil {
+				return &VEmpty{}, nil
+			}
+			current_result.tail = &VEmpty{}
+			return result, nil
+		},
+	},
+
+	PrimitiveDesc{"filter", 2, 2,
+		func(name string, args []Value) (Value, error) {
+			if err := checkArgType(name, args[0], isFunction); err != nil {
+				return nil, err
+			}
+			if err := checkArgType(name, args[1], isList); err != nil {
+				return nil, err
+			}
+			var result Value = nil
+			var current_result *VCons = nil
+			current := args[1]
+			for current.isCons() {
+				v, err := args[0].apply([]Value{current.headValue()})
+				if err != nil {
+					return nil, err
+				}
+				if v.isTrue() { 
+					cell := &VCons{head: current.headValue(), tail: nil}
+					if current_result == nil {
+						result = cell
+					} else {
+						current_result.tail = cell
+					}
+					current_result = cell
+				}
+				current = current.tailValue()
+			}
+			if !current.isEmpty() {
+				return nil, fmt.Errorf("%s - malformed list", name)
+			}				
+			if current_result == nil {
+				return &VEmpty{}, nil
+			}
+			current_result.tail = &VEmpty{}
+			return result, nil
+		},
+	},
+	
+	PrimitiveDesc{"foldr", 3, 3,
+		func(name string, args []Value) (Value, error) {
+			if err := checkArgType(name, args[0], isFunction); err != nil {
+				return nil, err
+			}
+			if err := checkArgType(name, args[1], isList); err != nil {
+				return nil, err
+			}
+			var temp Value = &VEmpty{}
+			// first reverse the list
+			current := args[1]
+			for current.isCons() {
+				temp = &VCons{head: current.headValue(), tail: temp}
+				current = current.tailValue()
+			}
+			if !current.isEmpty() {
+				return nil, fmt.Errorf("%s - malformed list", name)
+			}
+			// then fold it
+			result := args[2]
+			current = temp
+			for current.isCons() {
+				v, err := args[0].apply([]Value{current.headValue(), result})
+				if err != nil {
+					return nil, err
+				}
+				result = v
+				current = current.tailValue()
+			}
+			if !current.isEmpty() {
+				return nil, fmt.Errorf("%s - malformed list", name)
+			}
+			return result, nil
+		},
+	},
+	
+	PrimitiveDesc{"foldl", 3, 3,
+		func(name string, args []Value) (Value, error) {
+			if err := checkArgType(name, args[0], isFunction); err != nil {
+				return nil, err
+			}
+			if err := checkArgType(name, args[1], isList); err != nil {
+				return nil, err
+			}
+			result := args[2]
+			current := args[1]
+			for current.isCons() {
+				v, err := args[0].apply([]Value{result, current.headValue()})
+				if err != nil {
+					return nil, err
+				}
+				result = v
+				current = current.tailValue()
+			}
+			if !current.isEmpty() {
+				return nil, fmt.Errorf("%s - malformed list", name)
+			}
+			return result, nil
+		},
+	},
+	
 }
+
+func allConses(vs []Value) bool {
+	for _, v := range vs {
+		if !v.isCons() {
+			return false
+		}
+	}
+	return true
+}
+
+
+// left:
+//
+// eq? and equal?   (or maybe same? and eq? or maybe eq? is just =?) should we make = etc generic?
+// various type predicates (nil? etc)
+// references
+// dictionaries #((a 1) (b 2))  arrays #[a b c]
