@@ -7,13 +7,6 @@ type Env struct {
 	previous *Env
 }
 
-func min (a int, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func (env *Env) lookup(name string) (Value, error) {
 	current := env
 	for current != nil {
@@ -44,7 +37,7 @@ func (env *Env) layer(names []string, values []Value) *Env {
 	return &Env{bindings: bindings, previous: env}
 }
 
-func makeEnv(bindings map[string]Value) *Env {
+func mkEnv(bindings map[string]Value) *Env {
 	return &Env{bindings: bindings, previous: nil}
 }
 
