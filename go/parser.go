@@ -9,12 +9,11 @@ const kw_LETSTAR string = "let*"
 const kw_LETREC string = "letrec"
 const kw_LOOP string = "let"
 const kw_IF string = "if"
-const kw_FUN string = "fun"
+const kw_FUN string = "fn"
 const kw_QUOTE string = "quote"
 const kw_DO string = "do"
 
 const kw_MACRO string = "macro"
-const kw_DICT string = "dict"
 const kw_AND string = "and"
 const kw_OR string = "or"
 

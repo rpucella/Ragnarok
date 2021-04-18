@@ -492,6 +492,38 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 		},
 	},
 
+	PrimitiveDesc{"for", 2, -1,
+		func(name string, args []Value) (Value, error) {
+			if err := checkArgType(name, args[0], isFunction); err != nil {
+				return nil, err
+			}
+			// TODO - allow different types in the same iteration!
+			for i := range args[1:] {
+				if err := checkArgType(name, args[i + 1], isList); err != nil {
+					return nil, err
+				}
+			}
+			currents := make([]Value, len(args) - 1)
+			firsts := make([]Value, len(args) - 1)
+			for i := range args[1:] {
+				currents[i] = args[i + 1]
+			}
+			for allConses(currents) {
+				for i := range currents {
+					firsts[i] = currents[i].headValue()
+				}
+				_, err := args[0].apply(firsts)
+				if err != nil {
+					return nil, err
+				}
+				for i := range currents {
+					currents[i] = currents[i].tailValue()
+				}
+			}
+			return &VNil{}, nil
+		},
+	},
+
 	PrimitiveDesc{"filter", 2, 2,
 		func(name string, args []Value) (Value, error) {
 			if err := checkArgType(name, args[0], isFunction); err != nil {
@@ -672,6 +704,23 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			return &VBoolean{args[0].isNil()}, nil
 		},
 	},
+
+	PrimitiveDesc{"array", 0, -1,
+		func(name string, args []Value) (Value, error) {
+			content := make([]Value, len(args))
+			for i, v := range args {
+				content[i] = v
+			}
+			return &VArray{content}, nil
+		},
+	},
+
+	PrimitiveDesc{"array?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isArray()}, nil
+		},
+	},
+	
 }
 
 

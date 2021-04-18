@@ -29,6 +29,8 @@ type Value interface {
 	typ() string
 	getValue() Value
 	setValue(Value)
+	isArray() bool
+	getArray() []Value
 }
 
 type VInteger struct {
@@ -72,6 +74,10 @@ type VNil struct {
 
 type VReference struct {
 	content Value
+}
+
+type VArray struct {
+	content []Value
 }
 
 // dictionary?
@@ -181,6 +187,14 @@ func (v *VInteger) setValue(cv Value) {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VInteger) isArray() bool {
+	return false
+}
+
+func (v *VInteger) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VBoolean) display() string {
 	if v.val {
 		return "#t"
@@ -285,6 +299,14 @@ func (v *VBoolean) setValue(cv Value) {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VBoolean) isArray() bool {
+	return false
+}
+
+func (v *VBoolean) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VPrimitive) display() string {
 	return fmt.Sprintf("#<prim %s>", v.name)
 }
@@ -381,6 +403,14 @@ func (v *VPrimitive) setValue(cv Value) {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VPrimitive) isArray() bool {
+	return false
+}
+
+func (v *VPrimitive) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VEmpty) display() string {
 	return "()"
 }
@@ -474,6 +504,14 @@ func (v *VEmpty) getValue() Value {
 }
 
 func (v *VEmpty) setValue(cv Value) {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VEmpty) isArray() bool {
+	return false
+}
+
+func (v *VEmpty) getArray() []Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
@@ -588,6 +626,14 @@ func (v *VCons) setValue(cv Value) {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VCons) isArray() bool {
+	return false
+}
+
+func (v *VCons) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VSymbol) display() string {
 	return v.name
 }
@@ -681,6 +727,14 @@ func (v *VSymbol) getValue() Value {
 }
 
 func (v *VSymbol) setValue(cv Value) {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VSymbol) isArray() bool {
+	return false
+}
+
+func (v *VSymbol) getArray() []Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
@@ -784,6 +838,14 @@ func (v *VFunction) setValue(cv Value) {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VFunction) isArray() bool {
+	return false
+}
+
+func (v *VFunction) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VString) display() string {
 	return "\"" + v.val + "\""
 }
@@ -877,6 +939,14 @@ func (v *VString) getValue() Value {
 }
 
 func (v *VString) setValue(cv Value) {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VString) isArray() bool {
+	return false
+}
+
+func (v *VString) getArray() []Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
@@ -977,6 +1047,14 @@ func (v *VNil) setValue(cv Value) {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VNil) isArray() bool {
+	return false
+}
+
+func (v *VNil) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VReference) display() string {
 	return fmt.Sprintf("#<ref %s>", v.content.display())
 }
@@ -1065,7 +1143,7 @@ func (v *VReference) isEqual(vv Value) bool {
 }
 
 func (v *VReference) typ() string {
-	return "ref"
+	return "reference"
 }
 
 func (v *VReference) getValue() Value {
@@ -1074,5 +1152,140 @@ func (v *VReference) getValue() Value {
 
 func (v *VReference) setValue(cv Value) {
 	v.content = cv
+}
+
+func (v *VReference) isArray() bool {
+	return false
+}
+
+func (v *VReference) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) display() string {
+	s := make([]string, len(v.content))
+	for i, vv := range v.content {
+		s[i] = vv.display()
+	}
+	return fmt.Sprintf("#[%s]", strings.Join(s, " "))
+}
+
+func (v *VArray) displayCDR() string {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) intValue() int {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) strValue() string {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) boolValue() bool {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) apply(args []Value) (Value, error) {
+	if len(args) != 1 || !args[0].isNumber() {
+		return nil, fmt.Errorf("array indexing requires an index")
+	}
+	idx := args[0].intValue()
+	if idx < 0 || idx >= len(v.content) {
+		return nil, fmt.Errorf("array index out of bounds %d", idx)
+	}
+	return v.content[idx], nil
+}
+
+func (v *VArray) str() string {
+	s := make([]string, len(v.content))
+	for i, vv := range v.content {
+		s[i] = vv.str()
+	}
+	return fmt.Sprintf("VArray[%s]", s)
+}
+
+func (v *VArray) headValue() Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) tailValue() Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) isAtom() bool {
+	return false   // ?
+}
+
+func (v *VArray) isSymbol() bool {
+	return false
+}
+
+func (v *VArray) isCons() bool {
+	return false
+}
+
+func (v *VArray) isEmpty() bool {
+	return false
+}
+
+func (v *VArray) isNumber() bool {
+	return false
+}
+
+func (v *VArray) isBool() bool {
+	return false
+}
+
+func (v *VArray) isRef() bool {
+	return false
+}
+
+func (v *VArray) isString() bool {
+	return false
+}
+
+func (v *VArray) isFunction() bool {
+	return false
+}
+
+func (v *VArray) isTrue() bool {
+	return false
+}
+
+func (v *VArray) isNil() bool {
+	return false
+}
+
+func (v *VArray) isEqual(vv Value) bool {
+	if !vv.isArray() || len(v.content) != len(vv.getArray()) {
+		return false}
+	vvcontent := vv.getArray()
+	for i := range(v.content) {
+		if !v.content[i].isEqual(vvcontent[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (v *VArray) typ() string {
+	return "array"
+}
+
+func (v *VArray) getValue() Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) setValue(cv Value) {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VArray) isArray() bool {
+	return true
+}
+
+func (v *VArray) getArray() []Value {
+	return v.content
 }
 
