@@ -721,6 +721,28 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 		},
 	},
 	
+	PrimitiveDesc{"dict", 0, -1,
+		func(name string, args []Value) (Value, error) {
+			content := make(map[string]Value, len(args))
+			for _, v := range args {
+				if !v.isCons() || !v.tailValue().isCons() || !v.tailValue().tailValue().isEmpty() {
+					return nil, fmt.Errorf("dict item not a pair - %s", v.display())
+				}
+				if !v.headValue().isSymbol() {
+					return nil, fmt.Errorf("dict key is not a symbol - %s", v.headValue().display())
+				}
+				content[v.headValue().strValue()] = v.tailValue().headValue()
+			}
+			return &VDict{content}, nil
+		},
+	},
+
+	PrimitiveDesc{"dict?", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			return &VBoolean{args[0].isDict()}, nil
+		},
+	},
+	
 }
 
 

@@ -31,6 +31,8 @@ type Value interface {
 	setValue(Value)
 	isArray() bool
 	getArray() []Value
+	isDict() bool
+	getDict() map[string]Value
 }
 
 type VInteger struct {
@@ -80,16 +82,9 @@ type VArray struct {
 	content []Value
 }
 
-// dictionary?
-// what are possible keys?
-// anything immutable
-// probably need to define hashes
-
-/*
 type VDict struct {
-	dict map[Value]Value
+	content map[string]Value
 }
-*/
   
 func (v *VInteger) display() string {
 	return fmt.Sprintf("%d", v.val)
@@ -192,6 +187,14 @@ func (v *VInteger) isArray() bool {
 }
 
 func (v *VInteger) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VInteger) isDict() bool {
+	return false
+}
+
+func (v *VInteger) getDict() map[string]Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
@@ -307,6 +310,14 @@ func (v *VBoolean) getArray() []Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VBoolean) isDict() bool {
+	return false
+}
+
+func (v *VBoolean) getDict() map[string]Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VPrimitive) display() string {
 	return fmt.Sprintf("#<prim %s>", v.name)
 }
@@ -411,6 +422,14 @@ func (v *VPrimitive) getArray() []Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VPrimitive) isDict() bool {
+	return false
+}
+
+func (v *VPrimitive) getDict() map[string]Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VEmpty) display() string {
 	return "()"
 }
@@ -512,6 +531,14 @@ func (v *VEmpty) isArray() bool {
 }
 
 func (v *VEmpty) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VEmpty) isDict() bool {
+	return false
+}
+
+func (v *VEmpty) getDict() map[string]Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
@@ -634,6 +661,14 @@ func (v *VCons) getArray() []Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VCons) isDict() bool {
+	return false
+}
+
+func (v *VCons) getDict() map[string]Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VSymbol) display() string {
 	return v.name
 }
@@ -735,6 +770,14 @@ func (v *VSymbol) isArray() bool {
 }
 
 func (v *VSymbol) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VSymbol) isDict() bool {
+	return false
+}
+
+func (v *VSymbol) getDict() map[string]Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
@@ -846,6 +889,14 @@ func (v *VFunction) getArray() []Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VFunction) isDict() bool {
+	return false
+}
+
+func (v *VFunction) getDict() map[string]Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VString) display() string {
 	return "\"" + v.val + "\""
 }
@@ -947,6 +998,14 @@ func (v *VString) isArray() bool {
 }
 
 func (v *VString) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VString) isDict() bool {
+	return false
+}
+
+func (v *VString) getDict() map[string]Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
@@ -1052,6 +1111,14 @@ func (v *VNil) isArray() bool {
 }
 
 func (v *VNil) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VNil) isDict() bool {
+	return false
+}
+
+func (v *VNil) getDict() map[string]Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
@@ -1162,6 +1229,14 @@ func (v *VReference) getArray() []Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.str()))
 }
 
+func (v *VReference) isDict() bool {
+	return false
+}
+
+func (v *VReference) getDict() map[string]Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
 func (v *VArray) display() string {
 	s := make([]string, len(v.content))
 	for i, vv := range v.content {
@@ -1202,7 +1277,7 @@ func (v *VArray) str() string {
 	for i, vv := range v.content {
 		s[i] = vv.str()
 	}
-	return fmt.Sprintf("VArray[%s]", s)
+	return fmt.Sprintf("VArray[%s]", strings.Join(s, " "))
 }
 
 func (v *VArray) headValue() Value {
@@ -1286,6 +1361,146 @@ func (v *VArray) isArray() bool {
 }
 
 func (v *VArray) getArray() []Value {
+	return v.content
+}
+
+func (v *VArray) isDict() bool {
+	return false
+}
+
+func (v *VArray) getDict() map[string]Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) display() string {
+	s := make([]string, len(v.content))
+	i := 0
+	for k, vv := range v.content {
+		s[i] = fmt.Sprintf("(%s %s)", k, vv.display())
+		i++
+	}
+	return fmt.Sprintf("#(%s)", strings.Join(s, " "))
+}
+
+func (v *VDict) displayCDR() string {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) intValue() int {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) strValue() string {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) boolValue() bool {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) apply(args []Value) (Value, error) {
+	if len(args) != 1 || !args[0].isSymbol() {
+		return nil, fmt.Errorf("dict indexing requires a key")
+	}
+	key := args[0].strValue()
+	result, ok := v.content[key]
+	if !ok {
+		return nil, fmt.Errorf("key %s not in dict", key)
+	}
+	return result, nil
+}
+
+func (v *VDict) str() string {
+	s := make([]string, len(v.content))
+	i := 0
+	for k, vv := range v.content {
+		s[i] = fmt.Sprintf("[%s %s]", k, vv.str())
+		i++
+	}
+	return fmt.Sprintf("VDict[%s]", strings.Join(s, " "))
+}
+
+func (v *VDict) headValue() Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) tailValue() Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) isAtom() bool {
+	return false   // ?
+}
+
+func (v *VDict) isSymbol() bool {
+	return false
+}
+
+func (v *VDict) isCons() bool {
+	return false
+}
+
+func (v *VDict) isEmpty() bool {
+	return false
+}
+
+func (v *VDict) isNumber() bool {
+	return false
+}
+
+func (v *VDict) isBool() bool {
+	return false
+}
+
+func (v *VDict) isRef() bool {
+	return false
+}
+
+func (v *VDict) isString() bool {
+	return false
+}
+
+func (v *VDict) isFunction() bool {
+	return false
+}
+
+func (v *VDict) isTrue() bool {
+	return false
+}
+
+func (v *VDict) isNil() bool {
+	return false
+}
+
+func (v *VDict) isEqual(vv Value) bool {
+	return v == vv    // pointer equality due to mutability
+}
+
+func (v *VDict) typ() string {
+	return "dict"
+}
+
+func (v *VDict) getValue() Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) setValue(cv Value) {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) isArray() bool {
+	return false
+}
+
+func (v *VDict) getArray() []Value {
+	panic(fmt.Sprintf("unchecked access to %s", v.str()))
+}
+
+func (v *VDict) isDict() bool {
+	return true
+}
+
+func (v *VDict) getDict() map[string]Value {
 	return v.content
 }
 
