@@ -24,6 +24,8 @@ type Value interface {
 	isFunction() bool
 	isTrue() bool
 	isNil() bool
+	//isEq() bool    -- don't think we need pointer equality for now - = is enough?
+	isEqual(Value) bool
 	typ() string
 	getValue() Value
 	setValue(Value)
@@ -163,6 +165,10 @@ func (v *VInteger) isNil() bool {
 	return false
 }
 
+func (v *VInteger) isEqual(vv Value) bool {
+	return vv.isNumber() && v.intValue() == vv.intValue()
+}
+
 func (v *VInteger) typ() string {
 	return "int"
 }
@@ -263,6 +269,10 @@ func (v *VBoolean) isNil() bool {
 	return false
 }
 
+func (v *VBoolean) isEqual(vv Value) bool {
+	return vv.isBool() && v.boolValue() == vv.boolValue()
+}
+
 func (v *VBoolean) typ() string {
 	return "bool"
 }
@@ -353,6 +363,10 @@ func (v *VPrimitive) isTrue() bool {
 
 func (v *VPrimitive) isNil() bool {
 	return false
+}
+
+func (v *VPrimitive) isEqual(vv Value) bool {
+	return v == vv      // pointer equality
 }
 
 func (v *VPrimitive) typ() string {
@@ -447,6 +461,10 @@ func (v *VEmpty) isNil() bool {
 	return false
 }
 
+func (v *VEmpty) isEqual(vv Value) bool {
+	return vv.isEmpty()
+}
+
 func (v *VEmpty) typ() string {
 	return "list"
 }
@@ -539,6 +557,25 @@ func (v *VCons) isNil() bool {
 	return false
 }
 
+func (v *VCons) isEqual(vv Value) bool {
+	if !vv.isCons() {
+		return false
+	}
+	var curr1 Value = v
+	var curr2 Value = vv
+	for curr1.isCons() {
+		if !curr2.isCons() {
+			return false
+		}
+		if !curr1.headValue().isEqual(curr2.headValue()) {
+			return false
+		}
+		curr1 = curr1.tailValue()
+		curr2 = curr2.tailValue()
+	}
+	return curr1.isEqual(curr2)   // should both be empty at the end
+}
+
 func (v *VCons) typ() string {
 	return "list"
 }
@@ -629,6 +666,10 @@ func (v *VSymbol) isTrue() bool {
 
 func (v *VSymbol) isNil() bool {
 	return false
+}
+
+func (v *VSymbol) isEqual(vv Value) bool {
+	return vv.isSymbol() && v.strValue() == vv.strValue()
 }
 
 func (v *VSymbol) typ() string {
@@ -727,6 +768,10 @@ func (v *VFunction) isNil() bool {
 	return false
 }
 
+func (v *VFunction) isEqual(vv Value) bool {
+	return v == vv    // pointer equality
+}
+
 func (v *VFunction) typ() string {
 	return "fun"
 }
@@ -817,6 +862,10 @@ func (v *VString) isTrue() bool {
 
 func (v *VString) isNil() bool {
 	return false
+}
+
+func (v *VString) isEqual(vv Value) bool {
+	return vv.isString() && v.strValue() == vv.strValue()
 }
 
 func (v *VString) typ() string {
@@ -912,6 +961,10 @@ func (v *VNil) isNil() bool {
 	return true
 }
 
+func (v *VNil) isEqual(vv Value) bool {
+	return vv.isNil()
+}
+
 func (v *VNil) typ() string {
 	return "nil"
 }
@@ -1005,6 +1058,10 @@ func (v *VReference) isTrue() bool {
 
 func (v *VReference) isNil() bool {
 	return false
+}
+
+func (v *VReference) isEqual(vv Value) bool {
+	return v == vv     // pointer equality
 }
 
 func (v *VReference) typ() string {

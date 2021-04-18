@@ -202,8 +202,16 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 		},
 	},
 
-	PrimitiveDesc{"=", 2, 2,
-		mkNumPredicate(func(n1 int, n2 int) bool { return n1 == n2 }),
+	PrimitiveDesc{"=", 2, -1,
+		func(name string, args[]Value) (Value, error) { 
+			var reference Value = args[0]
+			for _, v := range args[1:] {
+				if !reference.isEqual(v) {
+					return &VBoolean{false}, nil
+				}
+			}
+			return &VBoolean{true}, nil
+		},
 	},
 
 	PrimitiveDesc{"<", 2, 2,
@@ -705,6 +713,5 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 
 // left:
 //
-// eq? and equal?   (or maybe same? and eq? or maybe eq? is just =?) should we make = etc generic?
 // dictionaries #((a 1) (b 2))  (dict '(a 10) '(b 20) '(c 30))  vs (apply dict '((a 10) (b 20) (c 30)))?
 // arrays #[a b c]

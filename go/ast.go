@@ -14,16 +14,16 @@ type Def struct {
 	body AST
 }
 
-type PartialResult struct {
-	exp AST
-	env *Env
-	val Value  // val is null when the result is still partial
-}
-
 type AST interface {
 	eval(*Env) (Value, error)
 	evalPartial(*Env) (*PartialResult, error)
 	str() string
+}
+
+type PartialResult struct {
+	exp AST
+	env *Env
+	val Value  // val is null when the result is still partial
 }
 
 type Literal struct {
