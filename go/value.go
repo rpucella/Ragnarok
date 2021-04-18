@@ -1333,6 +1333,8 @@ func (v *VArray) isNil() bool {
 }
 
 func (v *VArray) isEqual(vv Value) bool {
+	return v == vv    // pointer equality because arrays will be mutable
+	/*
 	if !vv.isArray() || len(v.content) != len(vv.getArray()) {
 		return false}
 	vvcontent := vv.getArray()
@@ -1342,6 +1344,7 @@ func (v *VArray) isEqual(vv Value) bool {
 		}
 	}
 	return true
+	*/
 }
 
 func (v *VArray) typ() string {
