@@ -667,8 +667,8 @@ func (v *VFunction) apply(args []Value) (Value, error) {
 	if len(v.params) != len(args) {
 		return nil, fmt.Errorf("Wrong number of arguments to application to %s", v.str())
 	}
-	new_env := v.env.layer(v.params, args)
-	return v.body.eval(new_env)
+	newEnv := v.env.layer(v.params, args)
+	return v.body.eval(newEnv)
 }
 
 func (v *VFunction) str() string {
