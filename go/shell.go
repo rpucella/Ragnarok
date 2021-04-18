@@ -83,7 +83,9 @@ func shell(eco *Ecosystem) {
 			fmt.Println("EVAL ERROR -", err.Error())
 			continue
 		}
-		fmt.Println(v.display())
+		if !v.isNil() { 
+			fmt.Println(v.display())
+		}
 	}
 }
 
