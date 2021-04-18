@@ -21,8 +21,9 @@ func (eco *Ecosystem) get(name string) (*Env, error) {
 	return env, nil
 }
 
-func (eco *Ecosystem) mkEnv(name string, bindings map[string]Value) {
+func (eco *Ecosystem) mkEnv(name string, bindings map[string]Value) *Env {
 	env := &Env{bindings: bindings, previous: nil, ecosystem: eco}
 	eco.modulesEnv[name] = env
 	eco.activesEnv[name] = env.layer([]string{}, []Value{})
+	return env
 }

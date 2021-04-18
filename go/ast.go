@@ -58,7 +58,7 @@ func (e *Literal) str() string {
 }
 
 func (e *Id) eval(env *Env) (Value, error) {
-	return env.lookup(e.name)
+	return env.find(e.name)
 }
 
 func (e *Id) str() string {

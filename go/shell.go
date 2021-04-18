@@ -6,12 +6,30 @@ import "os"
 import "strings"
 import "io"
 
+var context = Context{"", "", nil}
+
 func shell(eco *Ecosystem) {
-	currentModule := "core"
-	env, _ := eco.get(currentModule)
+	env := eco.mkEnv("*scratch*", map[string]Value{})
+	context.currentModule = "*scratch*"
+	context.nextCurrentModule = "*scratch*"
+	context.ecosystem = eco
 	reader := bufio.NewReader(os.Stdin)
+	showModules(env)
 	for {
-		fmt.Printf("%s> ", currentModule)
+		if context.nextCurrentModule != context.currentModule {
+			current := context.currentModule
+			context.currentModule = context.nextCurrentModule
+			new_env, err := eco.get(context.currentModule)
+			if err != nil {
+				// reset the module names
+				context.currentModule = current
+				context.nextCurrentModule = current
+				fmt.Println("ERROR -", err.Error())
+			} else {
+				env = new_env
+			}
+		}
+		fmt.Printf("%s> ", context.currentModule)
 		text, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -84,21 +102,29 @@ func initialize() *Ecosystem {
 		"a": &VInteger{99},
 		"square": &VPrimitive{"square", func(args []Value) (Value, error) {
 			if len(args) != 1 || !args[0].isNumber() {
-				return nil, fmt.Errorf("argument to square missing or not int")
+				return nil, fmt.Errorf("argument to square should be int")
 			}
 			return &VInteger{args[0].intValue() * args[0].intValue()}, nil
 		}},
 	}
 	eco.mkEnv("test", testBindings)
-	shellBindings := map[string]Value{
-		"quit": &VPrimitive{"quit", func(args []Value) (Value, error) {
-			if len(args) > 0 {
-				return nil, fmt.Errorf("too many arguments 0 to primitive quit")
-			}
-			bail()
-			return nil, nil
-		}},
-	}
+	shellBindings := shellPrimitives()
 	eco.mkEnv("shell", shellBindings)
+	configBindings := map[string]Value{
+		"lookup-path": &VReference{&VCons{head: &VSymbol{"shell"}, tail: &VCons{head: &VSymbol{"core"}, tail: &VEmpty{}}}},
+		"editor": &VReference{&VString{"emacs"}},
+	}
+	eco.mkEnv("config", configBindings)
 	return eco
+}
+
+func showModules(env *Env) {
+	modulesFn, err := env.lookup("shell", "modules")
+	if err != nil {
+		return
+	}
+	v, err := modulesFn.apply([]Value{})
+	if err != nil {
+		return}
+	fmt.Println("Modules", v.display())
 }

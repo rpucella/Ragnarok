@@ -41,9 +41,26 @@ func listAppend (v1 Value, v2 Value) Value {
 	return result
 }
 
+func allConses(vs []Value) bool {
+	for _, v := range vs {
+		if !v.isCons() {
+			return false
+		}
+	}
+	return true
+}
+
 func corePrimitives() map[string]Value {
 	bindings := map[string]Value{}
-	for _, d := range PRIMITIVES {
+	for _, d := range CORE_PRIMITIVES {
+		bindings[d.name] = &VPrimitive{d.name, mkPrimitive(d)}
+	}
+	return bindings
+}
+
+func shellPrimitives() map[string]Value {
+	bindings := map[string]Value{}
+	for _, d := range SHELL_PRIMITIVES {
 		bindings[d.name] = &VPrimitive{d.name, mkPrimitive(d)}
 	}
 	return bindings
@@ -92,23 +109,27 @@ func checkExactArgs(name string, args []Value, n int) error {
 }
 
 func isInt(v Value) bool {
-	return v.typ() == "int"
+	return v.isNumber()
 }
 
 func isString(v Value) bool {
-	return v.typ() == "string"
+	return v.isString()
+}
+
+func isSymbol(v Value) bool {
+	return v.isSymbol()
 }
 
 func isFunction(v Value) bool {
-	return v.typ() == "fun"
+	return v.isFunction()
 }
 
 func isList(v Value) bool {
-	return v.typ() == "list"
+	return v.isCons() || v.isEmpty()
 }
 
 func isReference(v Value) bool {
-	return v.typ() == "ref"
+	return v.isRef()
 }
 
 func mkNumPredicate(pred func(int, int)bool) func(string, []Value)(Value, error) {
@@ -126,7 +147,7 @@ func mkNumPredicate(pred func(int, int)bool) func(string, []Value)(Value, error)
 	}
 }
 
-var PRIMITIVES = []PrimitiveDesc{
+var CORE_PRIMITIVES = []PrimitiveDesc{
 	
 	PrimitiveDesc{
 		"type", 1, 1,
@@ -645,14 +666,41 @@ var PRIMITIVES = []PrimitiveDesc{
 	},
 }
 
-func allConses(vs []Value) bool {
-	for _, v := range vs {
-		if !v.isCons() {
-			return false
-		}
-	}
-	return true
+
+var SHELL_PRIMITIVES = []PrimitiveDesc{
+	
+	PrimitiveDesc{
+		"quit", 0, 0,
+		func(name string, args []Value) (Value, error) {
+			bail()
+			return &VNil{}, nil
+		},
+	},
+
+	PrimitiveDesc{
+		"module", 1, 1,
+		func(name string, args []Value) (Value, error) {
+			if err := checkArgType(name, args[0], isSymbol); err != nil { 
+				return nil, err
+			}
+			context.nextCurrentModule = args[0].strValue()
+			return &VNil{}, nil
+		},
+	},
+	
+	PrimitiveDesc{
+		"modules", 0, 0,
+		func(name string, args []Value) (Value, error) {
+			var result Value = &VEmpty{}
+			for m := range context.ecosystem.modulesEnv {
+				result = &VCons{head: &VSymbol{m}, tail: result}
+			}
+			return result, nil
+		},
+	},
+	
 }
+
 
 
 // left:
@@ -661,3 +709,5 @@ func allConses(vs []Value) bool {
 // dictionaries #((a 1) (b 2))  (dict '(a 10) '(b 20) '(c 30))  vs (apply dict '((a 10) (b 20) (c 30)))?
 // arrays #[a b c]
 // tail recursion in eval loop!
+
+

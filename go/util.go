@@ -14,3 +14,6 @@ func max (a int, b int) int {
 	return a
 }
 
+func valueIgnore(val Value, err error) Value {
+	return val
+}
