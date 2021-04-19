@@ -158,7 +158,6 @@ func (e *Apply) evalPartial(env *Env) (*PartialResult, error) {
 		return nil, err
 	}
 	return &PartialResult{nil, nil, v}, nil
-	
 }
 
 func (e *Apply) str() string {
@@ -206,4 +205,3 @@ func (e *LetRec) str() string {
 	}
 	return fmt.Sprintf("LetRec[%s %s]", strings.Join(bindings, " "), e.body.str())
 }
-

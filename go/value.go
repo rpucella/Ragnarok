@@ -1143,8 +1143,12 @@ func (v *VReference) boolValue() bool {
 }
 
 func (v *VReference) apply(args []Value) (Value, error) {
-	if len(args) > 0 {
-		return nil, fmt.Errorf("too many arguments %d to reference dereference", len(args))
+	if len(args) > 1 {
+		return nil, fmt.Errorf("too many arguments %d to ref update", len(args))
+	}
+	if len(args) == 1 {
+		v.content = args[0]
+		return &VNil{}, nil
 	}
 	return v.content, nil
 }
@@ -1262,12 +1266,19 @@ func (v *VArray) boolValue() bool {
 }
 
 func (v *VArray) apply(args []Value) (Value, error) {
-	if len(args) != 1 || !args[0].isNumber() {
+	if len(args) < 1 || !args[0].isNumber() {
 		return nil, fmt.Errorf("array indexing requires an index")
+	}
+	if len(args) > 2 {
+		return nil, fmt.Errorf("too many arguments %d to array update", len(args))
 	}
 	idx := args[0].intValue()
 	if idx < 0 || idx >= len(v.content) {
 		return nil, fmt.Errorf("array index out of bounds %d", idx)
+	}
+	if len(args) == 2 {
+		v.content[idx] = args[1]
+		return &VNil{}, nil
 	}
 	return v.content[idx], nil
 }
@@ -1402,10 +1413,17 @@ func (v *VDict) boolValue() bool {
 }
 
 func (v *VDict) apply(args []Value) (Value, error) {
-	if len(args) != 1 || !args[0].isSymbol() {
+	if len(args) < 1 || !args[0].isSymbol() {
 		return nil, fmt.Errorf("dict indexing requires a key")
 	}
+	if len(args) > 2 {
+		return nil, fmt.Errorf("too many arguments %d to dict update", len(args))
+	}
 	key := args[0].strValue()
+	if len(args) == 2 {
+		v.content[key] = args[1]
+		return &VNil{}, nil
+	}
 	result, ok := v.content[key]
 	if !ok {
 		return nil, fmt.Errorf("key %s not in dict", key)

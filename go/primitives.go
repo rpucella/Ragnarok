@@ -635,15 +635,15 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 	// (set (dict 'a) 10)
 	// like setf in CLISP
 	
-	PrimitiveDesc{"set", 2, 2,
-		func(name string, args []Value) (Value, error) {
-			if err := checkArgType(name, args[0], isReference); err != nil {
-				return nil, err
-			}
-			args[0].setValue(args[1])
-			return &VNil{}, nil
-		},
-	},
+	// PrimitiveDesc{"set", 2, 2,
+	// 	func(name string, args []Value) (Value, error) {
+	// 		if err := checkArgType(name, args[0], isReference); err != nil {
+	// 			return nil, err
+	// 		}
+	// 		args[0].setValue(args[1])
+	// 		return &VNil{}, nil
+	// 	},
+	// },
 	
 	PrimitiveDesc{"empty?", 1, 1,
 		func(name string, args []Value) (Value, error) {
