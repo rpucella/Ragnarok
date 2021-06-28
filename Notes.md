@@ -359,7 +359,7 @@ Do we want a genuine object system?
     #dict((10 20) (30 40) (50 60))
     
 
-## Generics
+## Generic getters/updaters for data structures
 
 Define generic getters and updater for various interesting operations:
 
@@ -381,7 +381,7 @@ If we have a dictionary d, we can read key k that holds a mutable value with:
     
 which can be written:
 
-    (get* d k)
+    (get! d k)
     
 and write to it with:
 
@@ -389,12 +389,25 @@ and write to it with:
     
 Or more simply:
 
-    (set* d k v)
+    (set! d k v)
     
 where:
 
-    (get* obj arg ...) = (get (get obj arg ...))
-    (set* obj args ... val) = (set (get obj arg ...) v)
-    
+    (get! obj arg ...) = (get (get obj arg ...))
+    (set! obj args ... val) = (set (get obj arg ...) v)
 
+
+## Generics
+
+Cf Practical Common Lisp - https://gigamonkeys.com/book/object-reorientation-generic-functions.html
+
+
+## Loop macro from CL
+
+Cf Practical Common Lisp - https://gigamonkeys.com/book/macros-standard-control-constructs.html
+
+
+## Condition system from CL
+
+Cf Practical Common Lisp - https://gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
 
