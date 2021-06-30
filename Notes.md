@@ -411,3 +411,16 @@ Cf Practical Common Lisp - https://gigamonkeys.com/book/macros-standard-control-
 
 Cf Practical Common Lisp - https://gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
 
+
+## CLI versus Web UI
+
+Abstraction: a REPL window
+
+When starting the CLI, a CLI-based REPL window is used. It also starts a web server that can serves the Web UI and that uses web socket connections to manage many REPL windows in the UI.
+
+Each REPL window has its own `*scratch*` environment, but also can access common environments.
+
+A module can be associated with an environment (usually of the same name as the module, but that's not necessary?)
+
+You can also start Ragnarok in server-only mode, `ragnarok --server` with an optional `--log` to save the logs somewhere.
+
