@@ -787,6 +787,24 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 		},
 	},
 
+	PrimitiveDesc{
+		"help", 0, 0,
+		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
+			context, ok := ctxt.(*Context)
+			if !ok {
+				return nil, fmt.Errorf("Problem understanding context")
+			}
+			context.report("Some help about the system")
+			context.report("")
+			context.report("      (quit)   bail out")
+			context.report("   (modules)   see available modules")
+			context.report("  (go 'buff)   navigate to a particular buffer")
+			context.report("")
+			return &lisp.VNil{}, nil
+		},
+	},
+	
+
 }
 
 // left:

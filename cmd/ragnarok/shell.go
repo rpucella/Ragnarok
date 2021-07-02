@@ -22,12 +22,13 @@ type Context struct {
 	currentModule     string
 	nextCurrentModule string // to switch modules, set nextCurrentModule != nil
 	ecosystem         Ecosystem
+	report            func(string)
 }
 
 func shell(eco Ecosystem) {
 	env := lisp.NewEnv(map[string]lisp.Value{}, nil, eco.modules)
 	eco.addShell("*scratch*", env)
-	context := &Context{"*scratch*", "", eco}
+	context := &Context{"*scratch*", "", eco, func(str string) { fmt.Println(";;", str) }}
 	stdInReader := bufio.NewReader(os.Stdin)
 	showModules(env)
 	for {
@@ -68,9 +69,10 @@ func shell(eco Ecosystem) {
 			continue
 		}
 		if d != nil {
+			// we have a declaration
 			if d.Type == lisp.DEF_FUNCTION {
 				env.Update(d.Name, lisp.NewVFunction(d.Params, d.Body, env))
-				fmt.Println(d.Name)
+				fmt.Println(";;", d.Name)
 				continue
 			}
 			if d.Type == lisp.DEF_VALUE {
@@ -80,7 +82,7 @@ func shell(eco Ecosystem) {
 					continue
 				}
 				env.Update(d.Name, v)
-				fmt.Println(d.Name)
+				fmt.Println(";;", d.Name)
 				continue
 			}
 			fmt.Println("DECLARE ERROR - unknow declaration type", d.Type)
