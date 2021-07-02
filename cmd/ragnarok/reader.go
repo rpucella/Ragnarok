@@ -1,9 +1,12 @@
 package main
 
-import "strconv"
-import "strings"
-import "regexp"
-import "errors"
+import (
+       "strconv"
+       "strings"
+       "regexp"
+       "errors"
+       "rpucella.net/ragnarok/internal/lisp"
+)
 
 func readToken(token string, s string) (string, string) {
 	r, _ := regexp.Compile(`^` + token)
@@ -43,74 +46,74 @@ func readQuote(s string) (bool, string) {
 	return readChar('\'', s)
 }
 
-func readSymbol(s string) (Value, string) {
+func readSymbol(s string) (lisp.Value, string) {
 	//fmt.Println("Trying to read as symbol")
 	result, rest := readToken(`[^"'()#\s]+`, s)
 	if result == "" {
 		return nil, s
 	}
-	return &VSymbol{result}, rest
+	return lisp.NewVSymbol(result), rest
 }
 
-func readString(s string) (Value, string) {
+func readString(s string) (lisp.Value, string) {
 	//fmt.Println("Trying to read as symbol")
 	result, rest := readToken(`"[^\n"]+"`, s)
 	if result == "" {
 		return nil, s
 	}
-	return &VString{result[1:len(result) - 1]}, rest
+	return lisp.NewVString(result[1:len(result) - 1]), rest
 }
 
-func readInteger(s string) (Value, string) {
+func readInteger(s string) (lisp.Value, string) {
 	//fmt.Println("Trying to read as integer")
 	result, rest := readToken(`-?[0-9]+`, s)
 	if result == "" {
 		return nil, s
 	}
 	num, _ := strconv.Atoi(result)
-	return &VInteger{num}, rest
+	return lisp.NewVInteger(num), rest
 }
 
-func readBoolean(s string) (Value, string) {
+func readBoolean(s string) (lisp.Value, string) {
 	// TODO: read all characters after # and then process
 	//       or treat # as a reader macro in some way?
 	result, rest := readToken(`#(?:t|T)`, s)
 	if result != "" {
-		return &VBoolean{true}, rest
+		return lisp.NewVBoolean(true), rest
 	}
 	result, rest = readToken(`#(?:f|F)`, s)
 	if result != "" {
-		return &VBoolean{false}, rest
+		return lisp.NewVBoolean(false), rest
 	}
 	return nil, s
 }
 
-func readList(s string) (Value, string, error) {
-	var current *VCons
-	var result *VCons
+func readList(s string) (lisp.Value, string, error) {
+	var current *lisp.VCons
+	var result *lisp.VCons
 	expr, rest, err := read(s)
 	for err == nil {
 		if current == nil {
-			result = &VCons{head: expr, tail: &VEmpty{}}
+			result = lisp.NewVCons(expr, &lisp.VEmpty{})
 			current = result
 		} else {
-			temp := &VCons{head: expr, tail: current.tail}
-			current.tail = temp
+			temp := lisp.NewVCons(expr, current.TailValue())
+			current.SetTail(temp)
 			current = temp
 		}
 		expr, rest, err = read(rest)
 	}
 	if current == nil {
-		return &VEmpty{}, rest, nil
+		return &lisp.VEmpty{}, rest, nil
 	}
 	return result, rest, nil
 }
 
-func read(s string) (Value, string, error) {
+func read(s string) (lisp.Value, string, error) {
 	//fmt.Println("Trying to read string", s)
 	var resultB bool
 	var rest string
-	var result Value
+	var result lisp.Value
 	var err error
 	result, rest = readInteger(s)
 	if result != nil {
@@ -130,16 +133,16 @@ func read(s string) (Value, string, error) {
 	}
 	resultB, rest = readQuote(s)
 	if resultB {
-		var expr Value
+		var expr lisp.Value
 		expr, rest, err = read(rest)
 		if err != nil {
 			return nil, s, err
 		}
-		return &VCons{head: &VSymbol{"quote"}, tail: &VCons{head: expr, tail: &VEmpty{}}}, rest, nil
+		return lisp.NewVCons(lisp.NewVSymbol("quote"), lisp.NewVCons(expr, &lisp.VEmpty{})), rest, nil
 	}
 	resultB, rest = readLP(s)
 	if resultB {
-		var exprs Value
+		var exprs lisp.Value
 		exprs, rest, err = readList(rest)
 		if err != nil {
 			return nil, s, err

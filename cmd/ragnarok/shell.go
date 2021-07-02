@@ -1,15 +1,18 @@
 package main
 
-import "fmt"
-import "bufio"
-import "os"
-import "strings"
-import "io"
+import (
+       "fmt"
+       "bufio"
+       "os"
+       "strings"
+       "io"
+       "rpucella.net/ragnarok/internal/lisp"
+)
 
 var context = Context{"", "", nil}
 
 func shell(eco *Ecosystem) {
-	env := eco.mkEnv("*scratch*", map[string]Value{})
+	env := eco.mkEnv("*scratch*", map[string]lisp.Value{})
 	context.currentModule = "*scratch*"
 	context.nextCurrentModule = "*scratch*"
 	context.ecosystem = eco
@@ -53,22 +56,22 @@ func shell(eco *Ecosystem) {
 			continue
 		}
 		if d != nil {
-			if d.typ == DEF_FUNCTION { 
-				env.update(d.name, &VFunction{d.params, d.body, env})
-				fmt.Println(d.name)
+			if d.Type == lisp.DEF_FUNCTION { 
+				env.Update(d.Name, lisp.NewVFunction(d.Params, d.Body, env))
+				fmt.Println(d.Name)
 				continue
 			}
-			if d.typ == DEF_VALUE {
-				v, err := d.body.eval(env)
+			if d.Type == lisp.DEF_VALUE {
+				v, err := d.Body.Eval(env)
 				if err != nil {
 					fmt.Println("EVAL ERROR -", err.Error())
 					continue
 				}
-				env.update(d.name, v)
-				fmt.Println(d.name)
+				env.Update(d.Name, v)
+				fmt.Println(d.Name)
 				continue
 			}
-			fmt.Println("DECLARE ERROR - unknow declaration type", d.typ)
+			fmt.Println("DECLARE ERROR - unknow declaration type", d.Type)
 			continue
 		}
 		// check if it's an expression
@@ -78,13 +81,13 @@ func shell(eco *Ecosystem) {
 			continue
 		}
 		///fmt.Println("expr =", e.str())
-		v, err = e.eval(env)
+		v, err = e.Eval(env)
 		if err != nil {
 			fmt.Println("EVAL ERROR -", err.Error())
 			continue
 		}
-		if !v.isNil() { 
-			fmt.Println(v.display())
+		if !v.IsNil() { 
+			fmt.Println(v.Display())
 		}
 	}
 }
@@ -97,36 +100,36 @@ func bail() {
 func initialize() *Ecosystem {
 	eco := mkEcosystem()
 	coreBindings := corePrimitives()
-	coreBindings["true"] = &VBoolean{true}
-	coreBindings["false"] = &VBoolean{false}
+	coreBindings["true"] = lisp.NewVBoolean(true)
+	coreBindings["false"] = lisp.NewVBoolean(false)
 	eco.mkEnv("core", coreBindings)
-	testBindings := map[string]Value{
-		"a": &VInteger{99},
-		"square": &VPrimitive{"square", func(args []Value) (Value, error) {
-			if len(args) != 1 || !args[0].isNumber() {
+	testBindings := map[string]lisp.Value{
+		"a": lisp.NewVInteger(99),
+		"square": lisp.NewVPrimitive("square", func(args []lisp.Value) (lisp.Value, error) {
+			if len(args) != 1 || !args[0].IsNumber() {
 				return nil, fmt.Errorf("argument to square should be int")
 			}
-			return &VInteger{args[0].intValue() * args[0].intValue()}, nil
-		}},
+			return lisp.NewVInteger(args[0].IntValue() * args[0].IntValue()), nil
+		}),
 	}
 	eco.mkEnv("test", testBindings)
 	shellBindings := shellPrimitives()
 	eco.mkEnv("shell", shellBindings)
-	configBindings := map[string]Value{
-		"lookup-path": &VReference{&VCons{head: &VSymbol{"shell"}, tail: &VCons{head: &VSymbol{"core"}, tail: &VEmpty{}}}},
-		"editor": &VReference{&VString{"emacs"}},
+	configBindings := map[string]lisp.Value{
+		"lookup-path": lisp.NewVReference(lisp.NewVCons(lisp.NewVSymbol("shell"), lisp.NewVCons(lisp.NewVSymbol("core"), &lisp.VEmpty{}))),
+		"editor": lisp.NewVReference(lisp.NewVString("emacs")),
 	}
 	eco.mkEnv("config", configBindings)
 	return eco
 }
 
-func showModules(env *Env) {
-	modulesFn, err := env.lookup("shell", "modules")
+func showModules(env *lisp.Env) {
+	modulesFn, err := env.Lookup("shell", "modules")
 	if err != nil {
 		return
 	}
-	v, err := modulesFn.apply([]Value{})
+	v, err := modulesFn.Apply([]lisp.Value{})
 	if err != nil {
 		return}
-	fmt.Println("Modules", v.display())
+	fmt.Println("Modules", v.Display())
 }

@@ -1,7 +1,10 @@
 package main
 
-import "errors"
-import "fmt"
+import (
+       "errors"
+       "fmt"
+       "rpucella.net/ragnarok/internal/lisp"
+)
 
 const kw_DEF string = "def"
 const kw_LET string = "let"
@@ -26,60 +29,60 @@ var fresh = (func(init int) func(string)string {
 	}
 })(0)
 
-func parseDef(sexp Value) (*Def, error) {
-	if !sexp.isCons() {
+func parseDef(sexp lisp.Value) (*lisp.Def, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isDef := parseKeyword(kw_DEF, sexp.headValue())
+	isDef := parseKeyword(kw_DEF, sexp.HeadValue())
 	if !isDef {
 		return nil, nil
 	}
-	next := sexp.tailValue()
-	if !next.isCons() {
+	next := sexp.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to def")
 	}
-	defBlock := next.headValue()
-	if defBlock.isSymbol() {
-		name := defBlock.strValue()
-		next = next.tailValue()
-		if !next.isCons() {
+	defBlock := next.HeadValue()
+	if defBlock.IsSymbol() {
+		name := defBlock.StrValue()
+		next = next.TailValue()
+		if !next.IsCons() {
 			return nil, errors.New("too few arguments to def")
 		}
-		value, err := parseExpr(next.headValue())
+		value, err := parseExpr(next.HeadValue())
 		if err != nil {
 			return nil, err
 		}
-		if !next.tailValue().isEmpty() {
+		if !next.TailValue().IsEmpty() {
 			return nil, errors.New("too many arguments to def")
 		}
-		return &Def{name, DEF_VALUE, nil, value}, nil
+		return lisp.NewDef(name, lisp.DEF_VALUE, nil, value), nil
 	}		
-	if defBlock.isCons() {
-		if !defBlock.headValue().isSymbol() { 
+	if defBlock.IsCons() {
+		if !defBlock.HeadValue().IsSymbol() { 
 			return nil, errors.New("definition name not a symbol")
 		}
-		name := defBlock.headValue().strValue()
-		params, err := parseSymbols(defBlock.tailValue())
+		name := defBlock.HeadValue().StrValue()
+		params, err := parseSymbols(defBlock.TailValue())
 		if err != nil {
 			return nil, err
 		}
-		next = next.tailValue()
-		if !next.isCons() {
+		next = next.TailValue()
+		if !next.IsCons() {
 			return nil, errors.New("too few arguments to def")
 		}
-		body, err := parseExpr(next.headValue())
+		body, err := parseExpr(next.HeadValue())
 		if err != nil {
 			return nil, err
 		}
-		if !next.tailValue().isEmpty() {
+		if !next.TailValue().IsEmpty() {
 			return nil, errors.New("too many arguments to def")
 		}
-		return &Def{name, DEF_FUNCTION, params, body}, nil
+		return lisp.NewDef(name, lisp.DEF_FUNCTION, params, body), nil
 	}
 	return nil, errors.New("malformed def")
 }
 
-func parseExpr(sexp Value) (AST, error) {
+func parseExpr(sexp lisp.Value) (lisp.AST, error) {
 	expr := parseAtom(sexp)
 	if expr != nil {
 		return expr, nil
@@ -119,351 +122,351 @@ func parseExpr(sexp Value) (AST, error) {
 	return nil, nil
 }
 
-func parseAtom(sexp Value) AST {
-	if sexp.isSymbol() {
-		return &Id{sexp.strValue()}
+func parseAtom(sexp lisp.Value) lisp.AST {
+	if sexp.IsSymbol() {
+		return lisp.NewId(sexp.StrValue())
 	}
-	if sexp.isAtom() {
-		return &Literal{sexp}
+	if sexp.IsAtom() {
+		return lisp.NewLiteral(sexp)
 	}
 	return nil
 }
 
-func parseKeyword(kw string, sexp Value) bool {
-	if !sexp.isSymbol() {
+func parseKeyword(kw string, sexp lisp.Value) bool {
+	if !sexp.IsSymbol() {
 		return false
 	}
-	return (sexp.strValue() == kw)
+	return (sexp.StrValue() == kw)
 }
 
-func parseQuote(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseQuote(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isQ := parseKeyword(kw_QUOTE, sexp.headValue())
+	isQ := parseKeyword(kw_QUOTE, sexp.HeadValue())
 	if !isQ {
 		return nil, nil
 	}
-	next := sexp.tailValue()
-	if !next.isCons() {
+	next := sexp.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("malformed quote")
 	}
-	if !next.tailValue().isEmpty() {
+	if !next.TailValue().IsEmpty() {
 		return nil, errors.New("too many arguments to quote")
 	}
-	return &Quote{next.headValue()}, nil
+	return lisp.NewQuote(next.HeadValue()), nil
 }
 
-func parseIf(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseIf(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isIf := parseKeyword(kw_IF, sexp.headValue())
+	isIf := parseKeyword(kw_IF, sexp.HeadValue())
 	if !isIf {
 		return nil, nil
 	}
-	next := sexp.tailValue()
-	if !next.isCons() {
+	next := sexp.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to if")
 	}
-	cnd, err := parseExpr(next.headValue())
+	cnd, err := parseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	next = next.tailValue()
-	if !next.isCons() {
+	next = next.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to if")
 	}
-	thn, err := parseExpr(next.headValue())
+	thn, err := parseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	next = next.tailValue()
-	if !next.isCons() {
+	next = next.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to if")
 	}
-	els, err := parseExpr(next.headValue())
+	els, err := parseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	if !next.tailValue().isEmpty() {
+	if !next.TailValue().IsEmpty() {
 		return nil, errors.New("too many arguments to if")
 	}
-	return &If{cnd, thn, els}, nil
+	return lisp.NewIf(cnd, thn, els), nil
 }
 
-func parseFunction(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseFunction(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isFun := parseKeyword(kw_FUN, sexp.headValue())
+	isFun := parseKeyword(kw_FUN, sexp.HeadValue())
 	if !isFun {
 		return nil, nil
 	}
-	next := sexp.tailValue()
-	if !next.isCons() {
+	next := sexp.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to fun")
 	}
-	if next.headValue().isSymbol() {
+	if next.HeadValue().IsSymbol() {
 		// we need to parse as a recursive function
 		// restart from scratch
 		return parseRecFunction(sexp)
 	}
-	params, err := parseSymbols(next.headValue())
+	params, err := parseSymbols(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	next = next.tailValue()
-	if !next.isCons() {
+	next = next.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to fun")
 	}
-	body, err := parseExpr(next.headValue())
+	body, err := parseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	if !next.tailValue().isEmpty() {
+	if !next.TailValue().IsEmpty() {
 		return nil, errors.New("too many arguments to fun")
 	}
 	return makeFunction(params, body), nil
 }
 
-func parseRecFunction(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseRecFunction(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isFun := parseKeyword(kw_FUN, sexp.headValue())
+	isFun := parseKeyword(kw_FUN, sexp.HeadValue())
 	if !isFun {
 		return nil, nil
 	}
-	next := sexp.tailValue()
-	if !next.isCons() {
+	next := sexp.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to fun")
 	}
-	recName := next.headValue().strValue()
-	next = next.tailValue()
-	params, err := parseSymbols(next.headValue())
+	recName := next.HeadValue().StrValue()
+	next = next.TailValue()
+	params, err := parseSymbols(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	next = next.tailValue()
-	if !next.isCons() {
+	next = next.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to fun")
 	}
-	body, err := parseExpr(next.headValue())
+	body, err := parseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	if !next.tailValue().isEmpty() {
+	if !next.TailValue().IsEmpty() {
 		return nil, errors.New("too many arguments to fun")
 	}
 	return makeRecFunction(recName, params, body), nil
 }
 
-func parseLet(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseLet(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isLet := parseKeyword(kw_LET, sexp.headValue())
+	isLet := parseKeyword(kw_LET, sexp.HeadValue())
 	if !isLet {
 		return nil, nil
 	}
-	next := sexp.tailValue()
-	if !next.isCons() {
+	next := sexp.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to let")
 	}
-	params, bindings, err := parseBindings(next.headValue())
+	params, bindings, err := parseBindings(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	next = next.tailValue()
-	if !next.isCons() {
+	next = next.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to let")
 	}
-	body, err := parseExpr(next.headValue())
+	body, err := parseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	if !next.tailValue().isEmpty() {
+	if !next.TailValue().IsEmpty() {
 		return nil, errors.New("too many arguments to let")
 	}
 	return makeLet(params, bindings, body), nil
 }
 
-func parseLetStar(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseLetStar(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isLet := parseKeyword(kw_LETSTAR, sexp.headValue())
+	isLet := parseKeyword(kw_LETSTAR, sexp.HeadValue())
 	if !isLet {
 		return nil, nil
 	}
-	next := sexp.tailValue()
-	if !next.isCons() {
+	next := sexp.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to let*")
 	}
-	params, bindings, err := parseBindings(next.headValue())
+	params, bindings, err := parseBindings(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	next = next.tailValue()
-	if !next.isCons() {
+	next = next.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to let*")
 	}
-	body, err := parseExpr(next.headValue())
+	body, err := parseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	if !next.tailValue().isEmpty() {
+	if !next.TailValue().IsEmpty() {
 		return nil, errors.New("too many arguments to let*")
 	}
 	return makeLetStar(params, bindings, body), nil
 }
 
-func parseLetRec(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseLetRec(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isLetRec := parseKeyword(kw_LETREC, sexp.headValue())
+	isLetRec := parseKeyword(kw_LETREC, sexp.HeadValue())
 	if !isLetRec {
 		return nil, nil
 	}
-	next := sexp.tailValue()
-	if !next.isCons() {
+	next := sexp.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to letrec")
 	}
-	names, params, bodies, err := parseFunBindings(next.headValue())
+	names, params, bodies, err := parseFunBindings(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	next = next.tailValue()
-	if !next.isCons() {
+	next = next.TailValue()
+	if !next.IsCons() {
 		return nil, errors.New("too few arguments to letrec")
 	}
-	body, err := parseExpr(next.headValue())
+	body, err := parseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
-	if !next.tailValue().isEmpty() {
+	if !next.TailValue().IsEmpty() {
 		return nil, errors.New("too many arguments to letrec")
 	}
-	return &LetRec{names, params, bodies, body}, nil
+	return lisp.NewLetRec(names, params, bodies, body), nil
 }
 
-func parseBindings(sexp Value) ([]string, []AST, error) {
+func parseBindings(sexp lisp.Value) ([]string, []lisp.AST, error) {
 	params := make([]string, 0)
-	bindings := make([]AST, 0)
+	bindings := make([]lisp.AST, 0)
 	current := sexp
-	for current.isCons() {
-		if !current.headValue().isCons() {
+	for current.IsCons() {
+		if !current.HeadValue().IsCons() {
 			return nil, nil, errors.New("expected binding (name expr)")
 		}
-		if !current.headValue().headValue().isSymbol() {
+		if !current.HeadValue().HeadValue().IsSymbol() {
 			return nil, nil, errors.New("expected name in binding")
 		}
-		params = append(params, current.headValue().headValue().strValue())
-		if !current.headValue().tailValue().isCons() {
+		params = append(params, current.HeadValue().HeadValue().StrValue())
+		if !current.HeadValue().TailValue().IsCons() {
 			return nil, nil, errors.New("expected expr in binding")
 		}
-		if !current.headValue().tailValue().tailValue().isEmpty() {
+		if !current.HeadValue().TailValue().TailValue().IsEmpty() {
 			return nil, nil, errors.New("too many elements in binding")
 		}
-		binding, err := parseExpr(current.headValue().tailValue().headValue())
+		binding, err := parseExpr(current.HeadValue().TailValue().HeadValue())
 		if err != nil {
 			return nil, nil, err
 		}
 		bindings = append(bindings, binding)
-		current = current.tailValue()
+		current = current.TailValue()
 	}
-	if !current.isEmpty() {
+	if !current.IsEmpty() {
 		return nil, nil, errors.New("malformed binding list")
 	}
 	return params, bindings, nil
 }
 
-func parseFunBindings(sexp Value) ([]string, [][]string, []AST, error) {
+func parseFunBindings(sexp lisp.Value) ([]string, [][]string, []lisp.AST, error) {
 	names := make([]string, 0)
 	params := make([][]string, 0)
-	bodies := make([]AST, 0)
+	bodies := make([]lisp.AST, 0)
 	current := sexp
-	for current.isCons() {
-		if !current.headValue().isCons() {
+	for current.IsCons() {
+		if !current.HeadValue().IsCons() {
 			return nil, nil, nil, errors.New("expected binding (name params expr)")
 		}
-		if !current.headValue().headValue().isSymbol() {
+		if !current.HeadValue().HeadValue().IsSymbol() {
 			return nil, nil, nil, errors.New("expected name in binding")
 		}
-		names = append(names, current.headValue().headValue().strValue())
-		if !current.headValue().tailValue().isCons() {
+		names = append(names, current.HeadValue().HeadValue().StrValue())
+		if !current.HeadValue().TailValue().IsCons() {
 			return nil, nil, nil, errors.New("expected params in binding")
 		}
-		these_params, err := parseSymbols(current.headValue().tailValue().headValue())
+		these_params, err := parseSymbols(current.HeadValue().TailValue().HeadValue())
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		params = append(params, these_params)
-		if !current.headValue().tailValue().tailValue().isCons() {
+		if !current.HeadValue().TailValue().TailValue().IsCons() {
 			return nil, nil, nil, errors.New("expected expr in binding")
 		}
-		if !current.headValue().tailValue().tailValue().tailValue().isEmpty() {
+		if !current.HeadValue().TailValue().TailValue().TailValue().IsEmpty() {
 			return nil, nil, nil, errors.New("too many elements in binding")
 		}
-		body, err := parseExpr(current.headValue().tailValue().tailValue().headValue())
+		body, err := parseExpr(current.HeadValue().TailValue().TailValue().HeadValue())
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		bodies = append(bodies, body)
-		current = current.tailValue()
+		current = current.TailValue()
 	}
-	if !current.isEmpty() {
+	if !current.IsEmpty() {
 		return nil, nil, nil, errors.New("malformed binding list")
 	}
 	return names, params, bodies, nil
 }
 
-func makeLet(params []string, bindings []AST, body AST) AST {
-	return &Apply{makeFunction(params, body), bindings}
+func makeLet(params []string, bindings []lisp.AST, body lisp.AST) lisp.AST {
+	return lisp.NewApply(makeFunction(params, body), bindings)
 }
 
-func makeLetStar(params []string, bindings []AST, body AST) AST {
+func makeLetStar(params []string, bindings []lisp.AST, body lisp.AST) lisp.AST {
 	result := body
 	for i := len(params) - 1; i >= 0; i-- {
-		result = makeLet([]string{params[i]}, []AST{bindings[i]}, result)
+		result = makeLet([]string{params[i]}, []lisp.AST{bindings[i]}, result)
 	}
 	return result
 }
 
-func makeFunction(params []string, body AST) AST {
+func makeFunction(params []string, body lisp.AST) lisp.AST {
 	name := fresh("__temp")
-	return &LetRec{[]string{name}, [][]string{params}, []AST{body}, &Id{name}}
+	return lisp.NewLetRec([]string{name}, [][]string{params}, []lisp.AST{body}, lisp.NewId(name))
 }
 
-func makeRecFunction(recName string, params []string, body AST) AST {
-	return &LetRec{[]string{recName}, [][]string{params}, []AST{body}, &Id{recName}}
+func makeRecFunction(recName string, params []string, body lisp.AST) lisp.AST {
+	return lisp.NewLetRec([]string{recName}, [][]string{params}, []lisp.AST{body}, lisp.NewId(recName))
 }
 
-func parseApply(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseApply(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	fun, err := parseExpr(sexp.headValue())
+	fun, err := parseExpr(sexp.HeadValue())
 	if err != nil {
 		return nil, err
 	}
 	if fun == nil {
 		return nil, nil
 	}
-	args, err := parseExprs(sexp.tailValue())
+	args, err := parseExprs(sexp.TailValue())
 	if err != nil {
 		return nil, err
 	}
-	return &Apply{fun, args}, nil
+	return lisp.NewApply(fun, args), nil
 }
 
-func parseExprs(sexp Value) ([]AST, error) {
-	args := make([]AST, 0)
+func parseExprs(sexp lisp.Value) ([]lisp.AST, error) {
+	args := make([]lisp.AST, 0)
 	current := sexp
-	for current.isCons() {
-		next, err := parseExpr(current.headValue())
+	for current.IsCons() {
+		next, err := parseExpr(current.HeadValue())
 		if err != nil {
 			return nil, err
 		}
@@ -471,52 +474,52 @@ func parseExprs(sexp Value) ([]AST, error) {
 			return nil, nil
 		}
 		args = append(args, next)
-		current = current.tailValue()
+		current = current.TailValue()
 	}
-	if !current.isEmpty() {
+	if !current.IsEmpty() {
 		return nil, errors.New("malformed expression list")
 	}
 	return args, nil
 }
 
-func parseSymbols(sexp Value) ([]string, error) {
+func parseSymbols(sexp lisp.Value) ([]string, error) {
 	params := make([]string, 0)
 	current := sexp
-	for current.isCons() {
-		if !current.headValue().isSymbol() {
+	for current.IsCons() {
+		if !current.HeadValue().IsSymbol() {
 			return nil, errors.New("expected symbol in list")
 		}
-		params = append(params, current.headValue().strValue())
-		current = current.tailValue()
+		params = append(params, current.HeadValue().StrValue())
+		current = current.TailValue()
 	}
-	if !current.isEmpty() {
+	if !current.IsEmpty() {
 		return nil, errors.New("malformed symbol list")
 	}
 	return params, nil
 }
 
-func parseDo(sexp Value) (AST, error) {
-	if !sexp.isCons() {
+func parseDo(sexp lisp.Value) (lisp.AST, error) {
+	if !sexp.IsCons() {
 		return nil, nil
 	}
-	isDo := parseKeyword(kw_DO, sexp.headValue())
+	isDo := parseKeyword(kw_DO, sexp.HeadValue())
 	if !isDo {
 		return nil, nil
 	}
-	exprs, err := parseExprs(sexp.tailValue())
+	exprs, err := parseExprs(sexp.TailValue())
 	if err != nil {
 		return nil, err
 	}
 	return makeDo(exprs), nil
 }
 
-func makeDo(exprs []AST) AST {
+func makeDo(exprs []lisp.AST) lisp.AST {
 	if len(exprs) > 0 {
 		result := exprs[len(exprs) - 1]
 		for i := len(exprs) - 2; i >= 0; i-- {
-			result = makeLet([]string{fresh("__temp")}, []AST{exprs[i]}, result)
+			result = makeLet([]string{fresh("__temp")}, []lisp.AST{exprs[i]}, result)
 		}
 		return result
 	}
-	return &Literal{&VNil{}}
+	return lisp.NewLiteral(&lisp.VNil{})
 }
