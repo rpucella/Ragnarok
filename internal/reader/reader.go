@@ -1,4 +1,4 @@
-package main
+package reader
 
 import (
        "strconv"
@@ -91,7 +91,7 @@ func readBoolean(s string) (lisp.Value, string) {
 func readList(s string) (lisp.Value, string, error) {
 	var current *lisp.VCons
 	var result *lisp.VCons
-	expr, rest, err := read(s)
+	expr, rest, err := Read(s)
 	for err == nil {
 		if current == nil {
 			result = lisp.NewVCons(expr, &lisp.VEmpty{})
@@ -101,7 +101,7 @@ func readList(s string) (lisp.Value, string, error) {
 			current.SetTail(temp)
 			current = temp
 		}
-		expr, rest, err = read(rest)
+		expr, rest, err = Read(rest)
 	}
 	if current == nil {
 		return &lisp.VEmpty{}, rest, nil
@@ -109,7 +109,7 @@ func readList(s string) (lisp.Value, string, error) {
 	return result, rest, nil
 }
 
-func read(s string) (lisp.Value, string, error) {
+func Read(s string) (lisp.Value, string, error) {
 	//fmt.Println("Trying to read string", s)
 	var resultB bool
 	var rest string
@@ -134,7 +134,7 @@ func read(s string) (lisp.Value, string, error) {
 	resultB, rest = readQuote(s)
 	if resultB {
 		var expr lisp.Value
-		expr, rest, err = read(rest)
+		expr, rest, err = Read(rest)
 		if err != nil {
 			return nil, s, err
 		}

@@ -3,6 +3,7 @@ package main
 import (
        "fmt"
        "rpucella.net/ragnarok/internal/lisp"
+       "rpucella.net/ragnarok/internal/reader"
 )
 
 func test() {
@@ -101,17 +102,17 @@ func test_if() {
 }
 
 func test_read() {
-	v1, _, _ := read("123")
+	v1, _, _ := reader.Read("123")
 	fmt.Println(v1.Str(), "->", v1.Display())
-	v2, _, _ := read("a")
+	v2, _, _ := reader.Read("a")
 	fmt.Println(v2.Str(), "->", v2.Display())
-	v6, _, _ := read("+")
+	v6, _, _ := reader.Read("+")
 	fmt.Println(v6.Str(), "->", v6.Display())
-	v3, _, _ := read("(+ 33 a)")
+	v3, _, _ := reader.Read("(+ 33 a)")
 	fmt.Println(v3.Str(), "->", v3.Display())
-	v4, _, _ := read("(+ 33 (+ a b))")
+	v4, _, _ := reader.Read("(+ 33 (+ a b))")
 	fmt.Println(v4.Str(), "->", v4.Display())
-	v5, _, _ := read("(this is my life)")
+	v5, _, _ := reader.Read("(this is my life)")
 	fmt.Println(v5.Str(), "->", v5.Display())
 }
 

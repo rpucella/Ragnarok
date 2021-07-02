@@ -7,6 +7,8 @@ import (
        "strings"
        "io"
        "rpucella.net/ragnarok/internal/lisp"
+       "rpucella.net/ragnarok/internal/reader"
+       "rpucella.net/ragnarok/internal/parser"
 )
 
 var context = Context{"", "", nil}
@@ -16,7 +18,7 @@ func shell(eco *Ecosystem) {
 	context.currentModule = "*scratch*"
 	context.nextCurrentModule = "*scratch*"
 	context.ecosystem = eco
-	reader := bufio.NewReader(os.Stdin)
+	stdInReader := bufio.NewReader(os.Stdin)
 	showModules(env)
 	for {
 		if context.nextCurrentModule != context.currentModule {
@@ -33,7 +35,7 @@ func shell(eco *Ecosystem) {
 			}
 		}
 		fmt.Printf("%s> ", context.currentModule)
-		text, err := reader.ReadString('\n')
+		text, err := stdInReader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println()
@@ -44,13 +46,13 @@ func shell(eco *Ecosystem) {
 		if strings.TrimSpace(text) == "" {
 			continue
 		}
-		v, _, err := read(text)
+		v, _, err := reader.Read(text)
 		if err != nil {
 			fmt.Println("READ ERROR -", err.Error())
 			continue
 		}
 		// check if it's a declaration
-		d, err := parseDef(v)
+		d, err := parser.ParseDef(v)
 		if err != nil { 
 			fmt.Println("PARSE ERROR -", err.Error())
 			continue
@@ -75,7 +77,7 @@ func shell(eco *Ecosystem) {
 			continue
 		}
 		// check if it's an expression
-		e, err := parseExpr(v)
+		e, err := parser.ParseExpr(v)
 		if err != nil { 
 			fmt.Println("PARSE ERROR -", err.Error())
 			continue

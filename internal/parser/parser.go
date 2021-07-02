@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
        "errors"
@@ -29,7 +29,7 @@ var fresh = (func(init int) func(string)string {
 	}
 })(0)
 
-func parseDef(sexp lisp.Value) (*lisp.Def, error) {
+func ParseDef(sexp lisp.Value) (*lisp.Def, error) {
 	if !sexp.IsCons() {
 		return nil, nil
 	}
@@ -48,7 +48,7 @@ func parseDef(sexp lisp.Value) (*lisp.Def, error) {
 		if !next.IsCons() {
 			return nil, errors.New("too few arguments to def")
 		}
-		value, err := parseExpr(next.HeadValue())
+		value, err := ParseExpr(next.HeadValue())
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +70,7 @@ func parseDef(sexp lisp.Value) (*lisp.Def, error) {
 		if !next.IsCons() {
 			return nil, errors.New("too few arguments to def")
 		}
-		body, err := parseExpr(next.HeadValue())
+		body, err := ParseExpr(next.HeadValue())
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +82,7 @@ func parseDef(sexp lisp.Value) (*lisp.Def, error) {
 	return nil, errors.New("malformed def")
 }
 
-func parseExpr(sexp lisp.Value) (lisp.AST, error) {
+func ParseExpr(sexp lisp.Value) (lisp.AST, error) {
 	expr := parseAtom(sexp)
 	if expr != nil {
 		return expr, nil
@@ -169,7 +169,7 @@ func parseIf(sexp lisp.Value) (lisp.AST, error) {
 	if !next.IsCons() {
 		return nil, errors.New("too few arguments to if")
 	}
-	cnd, err := parseExpr(next.HeadValue())
+	cnd, err := ParseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func parseIf(sexp lisp.Value) (lisp.AST, error) {
 	if !next.IsCons() {
 		return nil, errors.New("too few arguments to if")
 	}
-	thn, err := parseExpr(next.HeadValue())
+	thn, err := ParseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func parseIf(sexp lisp.Value) (lisp.AST, error) {
 	if !next.IsCons() {
 		return nil, errors.New("too few arguments to if")
 	}
-	els, err := parseExpr(next.HeadValue())
+	els, err := ParseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func parseFunction(sexp lisp.Value) (lisp.AST, error) {
 	if !next.IsCons() {
 		return nil, errors.New("too few arguments to fun")
 	}
-	body, err := parseExpr(next.HeadValue())
+	body, err := ParseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func parseRecFunction(sexp lisp.Value) (lisp.AST, error) {
 	if !next.IsCons() {
 		return nil, errors.New("too few arguments to fun")
 	}
-	body, err := parseExpr(next.HeadValue())
+	body, err := ParseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +282,7 @@ func parseLet(sexp lisp.Value) (lisp.AST, error) {
 	if !next.IsCons() {
 		return nil, errors.New("too few arguments to let")
 	}
-	body, err := parseExpr(next.HeadValue())
+	body, err := ParseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +312,7 @@ func parseLetStar(sexp lisp.Value) (lisp.AST, error) {
 	if !next.IsCons() {
 		return nil, errors.New("too few arguments to let*")
 	}
-	body, err := parseExpr(next.HeadValue())
+	body, err := ParseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func parseLetRec(sexp lisp.Value) (lisp.AST, error) {
 	if !next.IsCons() {
 		return nil, errors.New("too few arguments to letrec")
 	}
-	body, err := parseExpr(next.HeadValue())
+	body, err := ParseExpr(next.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +370,7 @@ func parseBindings(sexp lisp.Value) ([]string, []lisp.AST, error) {
 		if !current.HeadValue().TailValue().TailValue().IsEmpty() {
 			return nil, nil, errors.New("too many elements in binding")
 		}
-		binding, err := parseExpr(current.HeadValue().TailValue().HeadValue())
+		binding, err := ParseExpr(current.HeadValue().TailValue().HeadValue())
 		if err != nil {
 			return nil, nil, err
 		}
@@ -410,7 +410,7 @@ func parseFunBindings(sexp lisp.Value) ([]string, [][]string, []lisp.AST, error)
 		if !current.HeadValue().TailValue().TailValue().TailValue().IsEmpty() {
 			return nil, nil, nil, errors.New("too many elements in binding")
 		}
-		body, err := parseExpr(current.HeadValue().TailValue().TailValue().HeadValue())
+		body, err := ParseExpr(current.HeadValue().TailValue().TailValue().HeadValue())
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -448,7 +448,7 @@ func parseApply(sexp lisp.Value) (lisp.AST, error) {
 	if !sexp.IsCons() {
 		return nil, nil
 	}
-	fun, err := parseExpr(sexp.HeadValue())
+	fun, err := ParseExpr(sexp.HeadValue())
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +466,7 @@ func parseExprs(sexp lisp.Value) ([]lisp.AST, error) {
 	args := make([]lisp.AST, 0)
 	current := sexp
 	for current.IsCons() {
-		next, err := parseExpr(current.HeadValue())
+		next, err := ParseExpr(current.HeadValue())
 		if err != nil {
 			return nil, err
 		}
