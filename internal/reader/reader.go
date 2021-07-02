@@ -97,7 +97,7 @@ func readList(s string) (lisp.Value, string, error) {
 			result = lisp.NewVCons(expr, &lisp.VEmpty{})
 			current = result
 		} else {
-			temp := lisp.NewVCons(expr, current.TailValue())
+			temp := lisp.NewVCons(expr, current.GetTail())
 			current.SetTail(temp)
 			current = temp
 		}

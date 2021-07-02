@@ -69,10 +69,10 @@ func initialize() Ecosystem {
 	testBindings := map[string]lisp.Value{
 		"a": lisp.NewVInteger(99),
 		"square": lisp.NewVPrimitive("square", func(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			if len(args) != 1 || !args[0].IsNumber() {
+			if len(args) != 1 || !lisp.IsNumber(args[0]) {
 				return nil, fmt.Errorf("argument to square should be int")
 			}
-			return lisp.NewVInteger(args[0].IntValue() * args[0].IntValue()), nil
+			return lisp.NewVInteger(args[0].GetInt() * args[0].GetInt()), nil
 		}),
 	}
 	testEnv := lisp.NewEnv(testBindings, nil, eco.modules)

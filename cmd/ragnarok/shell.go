@@ -100,7 +100,7 @@ func shell(eco Ecosystem) {
 			fmt.Println("EVAL ERROR -", err.Error())
 			continue
 		}
-		if !v.IsNil() {
+		if !lisp.IsNil(v) {
 			fmt.Println(v.Display())
 		}
 	}

@@ -21,7 +21,7 @@ func test() {
 func primitiveAdd(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
 	var result int
 	for _, val := range args {
-		result += val.IntValue()
+		result += val.GetInt()
 	}
 	return lisp.NewVInteger(result), nil
 }
@@ -29,7 +29,7 @@ func primitiveAdd(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
 func primitiveMult(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
 	var result int = 1
 	for _, val := range args {
-		result *= val.IntValue()
+		result *= val.GetInt()
 	}
 	return lisp.NewVInteger(result), nil
 }
@@ -49,7 +49,7 @@ func sampleEnv() *lisp.Env {
 
 func test_value_10() {
 	var v1 lisp.Value = lisp.NewVInteger(10)
-	fmt.Println(v1.Str(), "->", v1.IntValue())
+	fmt.Println(v1.Str(), "->", v1.GetInt())
 }
 
 func test_value_plus() {
@@ -59,7 +59,7 @@ func test_value_plus() {
 	var vp lisp.Value = lisp.NewVPrimitive("+", primitiveAdd)
 	var args []lisp.Value = []lisp.Value{v1, v2, v3}
 	vr, _ := vp.Apply(args, nil)
-	fmt.Println(vp.Str(), "->", vr.IntValue())
+	fmt.Println(vp.Str(), "->", vr.GetInt())
 }
 
 func evalDisplay(e lisp.AST, env *lisp.Env) string {

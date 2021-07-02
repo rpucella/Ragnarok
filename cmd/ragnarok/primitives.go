@@ -16,9 +16,9 @@ type PrimitiveDesc struct {
 func listLength(v lisp.Value) int {
 	current := v
 	result := 0
-	for current.IsCons() {
+	for lisp.IsCons(current) {
 		result += 1
-		current = current.TailValue()
+		current = current.GetTail()
 	}
 	return result
 }
@@ -27,9 +27,9 @@ func listAppend(v1 lisp.Value, v2 lisp.Value) lisp.Value {
 	current := v1
 	var result lisp.Value = nil
 	var current_result *lisp.VCons = nil
-	for current.IsCons() {
-		cell := lisp.NewVCons(current.HeadValue(), nil)
-		current = current.TailValue()
+	for lisp.IsCons(current) {
+		cell := lisp.NewVCons(current.GetHead(), nil)
+		current = current.GetTail()
 		if current_result == nil {
 			result = cell
 		} else {
@@ -46,7 +46,7 @@ func listAppend(v1 lisp.Value, v2 lisp.Value) lisp.Value {
 
 func allConses(vs []lisp.Value) bool {
 	for _, v := range vs {
-		if !v.IsCons() {
+		if !lisp.IsCons(v) {
 			return false
 		}
 	}
@@ -85,7 +85,7 @@ func mkPrimitive(d PrimitiveDesc) func([]lisp.Value, interface{}) (lisp.Value, e
 
 func checkArgType(name string, arg lisp.Value, pred func(lisp.Value) bool) error {
 	if !pred(arg) {
-		return fmt.Errorf("%s - wrong argument type %s", name, arg.Kind())
+		return fmt.Errorf("%s - wrong argument type %s", name, lisp.Classify(arg))
 	}
 	return nil
 }
@@ -112,27 +112,27 @@ func checkExactArgs(name string, args []lisp.Value, n int) error {
 }
 
 func isInt(v lisp.Value) bool {
-	return v.IsNumber()
+	return lisp.IsNumber(v)
 }
 
 func IsString(v lisp.Value) bool {
-	return v.IsString()
+	return lisp.IsString(v)
 }
 
 func IsSymbol(v lisp.Value) bool {
-	return v.IsSymbol()
+	return lisp.IsSymbol(v)
 }
 
 func IsFunction(v lisp.Value) bool {
-	return v.IsFunction()
+	return lisp.IsFunction(v)
 }
 
 func isList(v lisp.Value) bool {
-	return v.IsCons() || v.IsEmpty()
+	return lisp.IsCons(v) || lisp.IsEmpty(v)
 }
 
 func IsReference(v lisp.Value) bool {
-	return v.IsRef()
+	return lisp.IsRef(v)
 }
 
 func mkNumPredicate(pred func(int, int) bool) func(string, []lisp.Value, interface{}) (lisp.Value, error) {
@@ -146,7 +146,7 @@ func mkNumPredicate(pred func(int, int) bool) func(string, []lisp.Value, interfa
 		if err := checkArgType(name, args[1], isInt); err != nil {
 			return nil, err
 		}
-		return lisp.NewVBoolean(pred(args[0].IntValue(), args[1].IntValue())), nil
+		return lisp.NewVBoolean(pred(args[0].GetInt(), args[1].GetInt())), nil
 	}
 }
 
@@ -155,7 +155,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"type", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVSymbol(args[0].Kind()), nil
+			return lisp.NewVSymbol(lisp.Classify(args[0])), nil
 		},
 	},
 
@@ -167,7 +167,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				if err := checkArgType(name, arg, isInt); err != nil {
 					return nil, err
 				}
-				v += arg.IntValue()
+				v += arg.GetInt()
 			}
 			return lisp.NewVInteger(v), nil
 		},
@@ -181,7 +181,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				if err := checkArgType(name, arg, isInt); err != nil {
 					return nil, err
 				}
-				v *= arg.IntValue()
+				v *= arg.GetInt()
 			}
 			return lisp.NewVInteger(v), nil
 		},
@@ -190,13 +190,13 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"-", 1, -1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			v := args[0].IntValue()
+			v := args[0].GetInt()
 			if len(args) > 1 {
 				for _, arg := range args[1:] {
 					if err := checkArgType(name, arg, isInt); err != nil {
 						return nil, err
 					}
-					v -= arg.IntValue()
+					v -= arg.GetInt()
 				}
 			} else {
 				v = -v
@@ -209,7 +209,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
 			var reference lisp.Value = args[0]
 			for _, v := range args[1:] {
-				if !reference.IsEqual(v) {
+				if !lisp.IsEqual(reference, v) {
 					return lisp.NewVBoolean(false), nil
 				}
 			}
@@ -235,7 +235,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 
 	PrimitiveDesc{"not", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(!args[0].IsTrue()), nil
+			return lisp.NewVBoolean(!lisp.IsTrue(args[0])), nil
 		},
 	},
 
@@ -247,7 +247,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				if err := checkArgType(name, arg, IsString); err != nil {
 					return nil, err
 				}
-				v += arg.StrValue()
+				v += arg.GetString()
 			}
 			return lisp.NewVString(v), nil
 		},
@@ -258,7 +258,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], IsString); err != nil {
 				return nil, err
 			}
-			return lisp.NewVInteger(len(args[0].StrValue())), nil
+			return lisp.NewVInteger(len(args[0].GetString())), nil
 		},
 	},
 
@@ -267,7 +267,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], IsString); err != nil {
 				return nil, err
 			}
-			return lisp.NewVString(strings.ToLower(args[0].StrValue())), nil
+			return lisp.NewVString(strings.ToLower(args[0].GetString())), nil
 		},
 	},
 
@@ -276,7 +276,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], IsString); err != nil {
 				return nil, err
 			}
-			return lisp.NewVString(strings.ToUpper(args[0].StrValue())), nil
+			return lisp.NewVString(strings.ToUpper(args[0].GetString())), nil
 		},
 	},
 
@@ -286,24 +286,24 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				return nil, err
 			}
 			start := 0
-			end := len(args[0].StrValue())
+			end := len(args[0].GetString())
 			if len(args) > 2 {
 				if err := checkArgType(name, args[2], isInt); err != nil {
 					return nil, err
 				}
-				end = min(args[2].IntValue(), end)
+				end = min(args[2].GetInt(), end)
 			}
 			if len(args) > 1 {
 				if err := checkArgType(name, args[1], isInt); err != nil {
 					return nil, err
 				}
-				start = max(args[1].IntValue(), start)
+				start = max(args[1].GetInt(), start)
 			}
 			// or perhaps raise an exception
 			if end < start {
 				return lisp.NewVString(""), nil
 			}
-			return lisp.NewVString(args[0].StrValue()[start:end]), nil
+			return lisp.NewVString(args[0].GetString()[start:end]), nil
 		},
 	},
 
@@ -318,10 +318,10 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			arguments := make([]lisp.Value, listLength(args[1]))
 			current := args[1]
 			for i := range arguments {
-				arguments[i] = current.HeadValue()
-				current = current.TailValue()
+				arguments[i] = current.GetHead()
+				current = current.GetTail()
 			}
-			if !current.IsEmpty() {
+			if !lisp.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
 			return args[0].Apply(arguments, ctxt)
@@ -364,11 +364,11 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			}
 			var result lisp.Value = &lisp.VEmpty{}
 			current := args[0]
-			for current.IsCons() {
-				result = lisp.NewVCons(current.HeadValue(), result)
-				current = current.TailValue()
+			for lisp.IsCons(current) {
+				result = lisp.NewVCons(current.GetHead(), result)
+				current = current.GetTail()
 			}
-			if !current.IsEmpty() {
+			if !lisp.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
 			return result, nil
@@ -380,10 +380,10 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], isList); err != nil {
 				return nil, err
 			}
-			if args[0].IsEmpty() {
+			if lisp.IsEmpty(args[0]) {
 				return nil, fmt.Errorf("%s - empty list argument", name)
 			}
-			return args[0].HeadValue(), nil
+			return args[0].GetHead(), nil
 		},
 	},
 
@@ -392,10 +392,10 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], isList); err != nil {
 				return nil, err
 			}
-			if args[0].IsEmpty() {
+			if lisp.IsEmpty(args[0]) {
 				return nil, fmt.Errorf("%s - empty list argument", name)
 			}
-			return args[0].TailValue(), nil
+			return args[0].GetTail(), nil
 		},
 	},
 
@@ -416,11 +416,11 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			}
 			count := 0
 			current := args[0]
-			for current.IsCons() {
+			for lisp.IsCons(current) {
 				count += 1
-				current = current.TailValue()
+				current = current.GetTail()
 			}
-			if !current.IsEmpty() {
+			if !lisp.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
 			return lisp.NewVInteger(count), nil
@@ -435,19 +435,19 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[1], isInt); err != nil {
 				return nil, err
 			}
-			idx := args[1].IntValue()
+			idx := args[1].GetInt()
 			if idx >= 0 {
 				current := args[0]
-				for current.IsCons() {
+				for lisp.IsCons(current) {
 					if idx == 0 {
-						return current.HeadValue(), nil
+						return current.GetHead(), nil
 					} else {
 						idx -= 1
-						current = current.TailValue()
+						current = current.GetTail()
 					}
 				}
 			}
-			return nil, fmt.Errorf("%s - index %d out of bound", name, args[1].IntValue())
+			return nil, fmt.Errorf("%s - index %d out of bound", name, args[1].GetInt())
 		},
 	},
 
@@ -470,7 +470,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			}
 			for allConses(currents) {
 				for i := range currents {
-					firsts[i] = currents[i].HeadValue()
+					firsts[i] = currents[i].GetHead()
 				}
 				v, err := args[0].Apply(firsts, ctxt)
 				if err != nil {
@@ -484,7 +484,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				}
 				current_result = cell
 				for i := range currents {
-					currents[i] = currents[i].TailValue()
+					currents[i] = currents[i].GetTail()
 				}
 			}
 			if current_result == nil {
@@ -513,14 +513,14 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			}
 			for allConses(currents) {
 				for i := range currents {
-					firsts[i] = currents[i].HeadValue()
+					firsts[i] = currents[i].GetHead()
 				}
 				_, err := args[0].Apply(firsts, ctxt)
 				if err != nil {
 					return nil, err
 				}
 				for i := range currents {
-					currents[i] = currents[i].TailValue()
+					currents[i] = currents[i].GetTail()
 				}
 			}
 			return &lisp.VNil{}, nil
@@ -538,13 +538,13 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			var result lisp.Value = nil
 			var current_result *lisp.VCons = nil
 			current := args[1]
-			for current.IsCons() {
-				v, err := args[0].Apply([]lisp.Value{current.HeadValue()}, ctxt)
+			for lisp.IsCons(current) {
+				v, err := args[0].Apply([]lisp.Value{current.GetHead()}, ctxt)
 				if err != nil {
 					return nil, err
 				}
-				if v.IsTrue() {
-					cell := lisp.NewVCons(current.HeadValue(), nil)
+				if lisp.IsTrue(v) {
+					cell := lisp.NewVCons(current.GetHead(), nil)
 					if current_result == nil {
 						result = cell
 					} else {
@@ -552,9 +552,9 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 					}
 					current_result = cell
 				}
-				current = current.TailValue()
+				current = current.GetTail()
 			}
-			if !current.IsEmpty() {
+			if !lisp.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
 			if current_result == nil {
@@ -576,25 +576,25 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			var temp lisp.Value = &lisp.VEmpty{}
 			// first reverse the list
 			current := args[1]
-			for current.IsCons() {
-				temp = lisp.NewVCons(current.HeadValue(), temp)
-				current = current.TailValue()
+			for lisp.IsCons(current) {
+				temp = lisp.NewVCons(current.GetHead(), temp)
+				current = current.GetTail()
 			}
-			if !current.IsEmpty() {
+			if !lisp.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
 			// then fold it
 			result := args[2]
 			current = temp
-			for current.IsCons() {
-				v, err := args[0].Apply([]lisp.Value{current.HeadValue(), result}, ctxt)
+			for lisp.IsCons(current) {
+				v, err := args[0].Apply([]lisp.Value{current.GetHead(), result}, ctxt)
 				if err != nil {
 					return nil, err
 				}
 				result = v
-				current = current.TailValue()
+				current = current.GetTail()
 			}
-			if !current.IsEmpty() {
+			if !lisp.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
 			return result, nil
@@ -611,15 +611,15 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			}
 			result := args[2]
 			current := args[1]
-			for current.IsCons() {
-				v, err := args[0].Apply([]lisp.Value{result, current.HeadValue()}, ctxt)
+			for lisp.IsCons(current) {
+				v, err := args[0].Apply([]lisp.Value{result, current.GetHead()}, ctxt)
 				if err != nil {
 					return nil, err
 				}
 				result = v
-				current = current.TailValue()
+				current = current.GetTail()
 			}
-			if !current.IsEmpty() {
+			if !lisp.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
 			return result, nil
@@ -650,61 +650,61 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 
 	PrimitiveDesc{"empty?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsEmpty()), nil
+			return lisp.NewVBoolean(lisp.IsEmpty(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"cons?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsCons()), nil
+			return lisp.NewVBoolean(lisp.IsCons(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"list?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsCons() || args[0].IsEmpty()), nil
+			return lisp.NewVBoolean(lisp.IsCons(args[0]) || lisp.IsEmpty(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"number?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsNumber()), nil
+			return lisp.NewVBoolean(lisp.IsNumber(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"ref?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsRef()), nil
+			return lisp.NewVBoolean(lisp.IsRef(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"boolean?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsBool()), nil
+			return lisp.NewVBoolean(lisp.IsBool(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"string?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsString()), nil
+			return lisp.NewVBoolean(lisp.IsString(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"symbol?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsSymbol()), nil
+			return lisp.NewVBoolean(lisp.IsSymbol(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"function?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsFunction()), nil
+			return lisp.NewVBoolean(lisp.IsFunction(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"nil?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsNil()), nil
+			return lisp.NewVBoolean(lisp.IsNil(args[0])), nil
 		},
 	},
 
@@ -720,7 +720,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 
 	PrimitiveDesc{"array?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsArray()), nil
+			return lisp.NewVBoolean(lisp.IsArray(args[0])), nil
 		},
 	},
 
@@ -728,13 +728,13 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
 			content := make(map[string]lisp.Value, len(args))
 			for _, v := range args {
-				if !v.IsCons() || !v.TailValue().IsCons() || !v.TailValue().TailValue().IsEmpty() {
+				if !lisp.IsCons(v) || !lisp.IsCons(v.GetTail()) || !lisp.IsEmpty(v.GetTail().GetTail()) {
 					return nil, fmt.Errorf("dict item not a pair - %s", v.Display())
 				}
-				if !v.HeadValue().IsSymbol() {
-					return nil, fmt.Errorf("dict key is not a symbol - %s", v.HeadValue().Display())
+				if !lisp.IsSymbol(v.GetHead()) {
+					return nil, fmt.Errorf("dict key is not a symbol - %s", v.GetHead().Display())
 				}
-				content[v.HeadValue().StrValue()] = v.TailValue().HeadValue()
+				content[v.GetHead().GetString()] = v.GetTail().GetHead()
 			}
 			return lisp.NewVDict(content), nil
 		},
@@ -742,7 +742,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 
 	PrimitiveDesc{"dict?", 1, 1,
 		func(name string, args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			return lisp.NewVBoolean(args[0].IsDict()), nil
+			return lisp.NewVBoolean(lisp.IsDict(args[0])), nil
 		},
 	},
 }
@@ -767,7 +767,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
-			context.nextCurrentModule = args[0].StrValue()
+			context.nextCurrentModule = args[0].GetString()
 			return &lisp.VNil{}, nil
 		},
 	},

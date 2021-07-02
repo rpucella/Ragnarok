@@ -16,11 +16,11 @@ type Def struct {
 
 type AST interface {
 	Eval(*Env, interface{}) (Value, error)
-	evalPartial(*Env, interface{}) (*PartialResult, error)
+	evalPartial(*Env, interface{}) (*partialResult, error)
 	Str() string
 }
 
-type PartialResult struct {
+type partialResult struct {
 	exp AST
 	env *Env
 	val Value // val is null when the result is still partial
@@ -84,7 +84,7 @@ func NewApply(fn AST, args []AST) *Apply {
 	return &Apply{fn, args}
 }
 
-func defaultEvalPartial(e AST, env *Env, ctxt interface{}) (*PartialResult, error) {
+func defaultEvalPartial(e AST, env *Env, ctxt interface{}) (*partialResult, error) {
 	// Partial evaluation
 	// Sometimes return an expression to evaluate next along
 	// with an environment for evaluation.
@@ -94,7 +94,7 @@ func defaultEvalPartial(e AST, env *Env, ctxt interface{}) (*PartialResult, erro
 	if err != nil {
 		return nil, err
 	}
-	return &PartialResult{nil, nil, v}, nil
+	return &partialResult{nil, nil, v}, nil
 }
 
 func defaultEval(e AST, env *Env, ctxt interface{}) (Value, error) {
@@ -118,7 +118,7 @@ func (e *Literal) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return e.val, nil
 }
 
-func (e *Literal) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+func (e *Literal) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) {
 	return defaultEvalPartial(e, env, ctxt)
 }
 
@@ -130,7 +130,7 @@ func (e *Id) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return env.find(e.name)
 }
 
-func (e *Id) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+func (e *Id) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) {
 	return defaultEvalPartial(e, env, ctxt)
 }
 
@@ -142,15 +142,15 @@ func (e *If) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return defaultEval(e, env, ctxt)
 }
 
-func (e *If) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+func (e *If) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) {
 	c, err := e.cnd.Eval(env, ctxt)
 	if err != nil {
 		return nil, err
 	}
-	if c.IsTrue() {
-		return &PartialResult{e.thn, env, nil}, nil
+	if IsTrue(c) {
+		return &partialResult{e.thn, env, nil}, nil
 	} else {
-		return &PartialResult{e.els, env, nil}, nil
+		return &partialResult{e.els, env, nil}, nil
 	}
 }
 
@@ -162,7 +162,7 @@ func (e *Apply) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return defaultEval(e, env, ctxt)
 }
 
-func (e *Apply) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+func (e *Apply) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) {
 	f, err := e.fn.Eval(env, ctxt)
 	if err != nil {
 		return nil, err
@@ -179,13 +179,13 @@ func (e *Apply) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) 
 			return nil, fmt.Errorf("Wrong number of arguments to application to %s", ff.Str())
 		}
 		newEnv := ff.env.Layer(ff.params, args)
-		return &PartialResult{ff.body, newEnv, nil}, nil
+		return &partialResult{ff.body, newEnv, nil}, nil
 	}
 	v, err := f.Apply(args, ctxt)
 	if err != nil {
 		return nil, err
 	}
-	return &PartialResult{nil, nil, v}, nil
+	return &partialResult{nil, nil, v}, nil
 }
 
 func (e *Apply) Str() string {
@@ -200,7 +200,7 @@ func (e *Quote) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return e.val, nil
 }
 
-func (e *Quote) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+func (e *Quote) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) {
 	return defaultEvalPartial(e, env, ctxt)
 }
 
@@ -212,7 +212,7 @@ func (e *LetRec) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return defaultEval(e, env, ctxt)
 }
 
-func (e *LetRec) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+func (e *LetRec) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) {
 	if len(e.names) != len(e.params) || len(e.names) != len(e.bodies) {
 		return nil, errors.New("malformed letrec (names, params, bodies)")
 	}
@@ -222,7 +222,7 @@ func (e *LetRec) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error)
 	for i, name := range e.names {
 		newEnv.Update(name, &VFunction{e.params[i], e.bodies[i], newEnv})
 	}
-	return &PartialResult{e.body, newEnv, nil}, nil
+	return &partialResult{e.body, newEnv, nil}, nil
 }
 
 func (e *LetRec) Str() string {

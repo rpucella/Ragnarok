@@ -33,18 +33,18 @@ func (env *Env) find(name string) (Value, error) {
 	}
 	// can't find it, so look for it in the search path modules
 	lookup_path, err := env.Lookup("config", "lookup-path")
-	if err != nil || !lookup_path.IsRef() {
+	if err != nil || !IsRef(lookup_path) {
 		return nil, fmt.Errorf("no such identifier %s", name)
 	}
-	modules := lookup_path.getValue()
-	for modules.IsCons() {
-		if modules.HeadValue().IsSymbol() {
-			result, err := env.Lookup(modules.HeadValue().StrValue(), name)
+	modules := lookup_path.GetValue()
+	for IsCons(modules) {
+		if IsSymbol(modules.GetHead()) {
+			result, err := env.Lookup(modules.GetHead().GetString(), name)
 			if err == nil {
 				return result, nil
 			}
 		}
-		modules = modules.TailValue()
+		modules = modules.GetTail()
 	}
 	return nil, fmt.Errorf("no such identifier %s", name)
 }
