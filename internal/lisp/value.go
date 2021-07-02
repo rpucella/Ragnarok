@@ -1,4 +1,4 @@
- package lisp
+package lisp
 
 import "fmt"
 import "strings"
@@ -11,7 +11,7 @@ type Value interface {
 	StrValue() string
 	HeadValue() Value
 	TailValue() Value
-	Apply([]Value) (Value, error)
+	Apply([]Value, interface{}) (Value, error)
 	Str() string
 	IsAtom() bool
 	IsSymbol() bool
@@ -40,7 +40,7 @@ type VInteger struct {
 }
 
 func NewVInteger(val int) *VInteger {
-     return &VInteger{val}
+	return &VInteger{val}
 }
 
 type VBoolean struct {
@@ -48,16 +48,16 @@ type VBoolean struct {
 }
 
 func NewVBoolean(val bool) *VBoolean {
-     return &VBoolean{val}
+	return &VBoolean{val}
 }
 
 type VPrimitive struct {
 	name      string
-	primitive func([]Value) (Value, error)
+	primitive func([]Value, interface{}) (Value, error)
 }
 
-func NewVPrimitive(name string, prim func([]Value) (Value, error)) *VPrimitive {
-     return &VPrimitive{name, prim}
+func NewVPrimitive(name string, prim func([]Value, interface{}) (Value, error)) *VPrimitive {
+	return &VPrimitive{name, prim}
 }
 
 type VEmpty struct {
@@ -70,11 +70,11 @@ type VCons struct {
 }
 
 func NewVCons(head Value, tail Value) *VCons {
-     return &VCons{head, tail, 0}   // length ignored for now...
+	return &VCons{head, tail, 0} // length ignored for now...
 }
 
 func (v *VCons) SetTail(val Value) {
-     v.tail = val
+	v.tail = val
 }
 
 type VSymbol struct {
@@ -82,17 +82,17 @@ type VSymbol struct {
 }
 
 func NewVSymbol(name string) *VSymbol {
-     return &VSymbol{name}
+	return &VSymbol{name}
 }
 
 type VFunction struct {
 	params []string
-	body AST
-	env *Env
+	body   AST
+	env    *Env
 }
 
 func NewVFunction(params []string, body AST, env *Env) *VFunction {
-     return &VFunction{params, body, env}
+	return &VFunction{params, body, env}
 }
 
 type VString struct {
@@ -100,7 +100,7 @@ type VString struct {
 }
 
 func NewVString(val string) *VString {
-     return &VString{val}
+	return &VString{val}
 }
 
 type VNil struct {
@@ -111,7 +111,7 @@ type VReference struct {
 }
 
 func NewVReference(content Value) *VReference {
-     return &VReference{content}
+	return &VReference{content}
 }
 
 type VArray struct {
@@ -119,7 +119,7 @@ type VArray struct {
 }
 
 func NewVArray(content []Value) *VArray {
-     return &VArray{content}
+	return &VArray{content}
 }
 
 type VDict struct {
@@ -127,9 +127,9 @@ type VDict struct {
 }
 
 func NewVDict(content map[string]Value) *VDict {
-     return &VDict{content}
+	return &VDict{content}
 }
-  
+
 func (v *VInteger) Display() string {
 	return fmt.Sprintf("%d", v.val)
 }
@@ -150,7 +150,7 @@ func (v *VInteger) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VInteger) Apply(args []Value) (Value, error) {
+func (v *VInteger) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
@@ -266,7 +266,7 @@ func (v *VBoolean) boolValue() bool {
 	return v.val
 }
 
-func (v *VBoolean) Apply(args []Value) (Value, error) {
+func (v *VBoolean) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
@@ -382,8 +382,8 @@ func (v *VPrimitive) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VPrimitive) Apply(args []Value) (Value, error) {
-	return v.primitive(args)
+func (v *VPrimitive) Apply(args []Value, ctxt interface{}) (Value, error) {
+	return v.primitive(args, ctxt)
 }
 
 func (v *VPrimitive) Str() string {
@@ -443,7 +443,7 @@ func (v *VPrimitive) IsNil() bool {
 }
 
 func (v *VPrimitive) IsEqual(vv Value) bool {
-	return v == vv      // pointer equality
+	return v == vv // pointer equality
 }
 
 func (v *VPrimitive) Kind() string {
@@ -494,7 +494,7 @@ func (v *VEmpty) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VEmpty) Apply(args []Value) (Value, error) {
+func (v *VEmpty) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
@@ -606,7 +606,7 @@ func (v *VCons) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VCons) Apply(args []Value) (Value, error) {
+func (v *VCons) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
@@ -682,7 +682,7 @@ func (v *VCons) IsEqual(vv Value) bool {
 		curr1 = curr1.TailValue()
 		curr2 = curr2.TailValue()
 	}
-	return curr1.IsEqual(curr2)   // should both be empty at the end
+	return curr1.IsEqual(curr2) // should both be empty at the end
 }
 
 func (v *VCons) Kind() string {
@@ -733,7 +733,7 @@ func (v *VSymbol) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VSymbol) Apply(args []Value) (Value, error) {
+func (v *VSymbol) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
@@ -845,12 +845,12 @@ func (v *VFunction) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VFunction) Apply(args []Value) (Value, error) {
+func (v *VFunction) Apply(args []Value, ctxt interface{}) (Value, error) {
 	if len(v.params) != len(args) {
 		return nil, fmt.Errorf("Wrong number of arguments to application to %s", v.Str())
 	}
 	newEnv := v.env.Layer(v.params, args)
-	return v.body.Eval(newEnv)
+	return v.body.Eval(newEnv, ctxt)
 }
 
 func (v *VFunction) Str() string {
@@ -910,7 +910,7 @@ func (v *VFunction) IsNil() bool {
 }
 
 func (v *VFunction) IsEqual(vv Value) bool {
-	return v == vv    // pointer equality
+	return v == vv // pointer equality
 }
 
 func (v *VFunction) Kind() string {
@@ -961,7 +961,7 @@ func (v *VString) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VString) Apply(args []Value) (Value, error) {
+func (v *VString) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
@@ -1074,7 +1074,7 @@ func (v *VNil) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VNil) Apply(args []Value) (Value, error) {
+func (v *VNil) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
@@ -1186,7 +1186,7 @@ func (v *VReference) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VReference) Apply(args []Value) (Value, error) {
+func (v *VReference) Apply(args []Value, ctxt interface{}) (Value, error) {
 	if len(args) > 1 {
 		return nil, fmt.Errorf("too many arguments %d to ref update", len(args))
 	}
@@ -1210,7 +1210,7 @@ func (v *VReference) TailValue() Value {
 }
 
 func (v *VReference) IsAtom() bool {
-	return false   // ?
+	return false // ?
 }
 
 func (v *VReference) IsSymbol() bool {
@@ -1254,7 +1254,7 @@ func (v *VReference) IsNil() bool {
 }
 
 func (v *VReference) IsEqual(vv Value) bool {
-	return v == vv     // pointer equality
+	return v == vv // pointer equality
 }
 
 func (v *VReference) Kind() string {
@@ -1309,7 +1309,7 @@ func (v *VArray) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VArray) Apply(args []Value) (Value, error) {
+func (v *VArray) Apply(args []Value, ctxt interface{}) (Value, error) {
 	if len(args) < 1 || !args[0].IsNumber() {
 		return nil, fmt.Errorf("array indexing requires an index")
 	}
@@ -1344,7 +1344,7 @@ func (v *VArray) TailValue() Value {
 }
 
 func (v *VArray) IsAtom() bool {
-	return false   // ?
+	return false // ?
 }
 
 func (v *VArray) IsSymbol() bool {
@@ -1388,17 +1388,17 @@ func (v *VArray) IsNil() bool {
 }
 
 func (v *VArray) IsEqual(vv Value) bool {
-	return v == vv    // pointer equality because arrays will be mutable
+	return v == vv // pointer equality because arrays will be mutable
 	/*
-	if !vv.IsArray() || len(v.content) != len(vv.getArray()) {
-		return false}
-	vvcontent := vv.getArray()
-	for i := range(v.content) {
-		if !v.content[i].IsEqual(vvcontent[i]) {
-			return false
+		if !vv.IsArray() || len(v.content) != len(vv.getArray()) {
+			return false}
+		vvcontent := vv.getArray()
+		for i := range(v.content) {
+			if !v.content[i].IsEqual(vvcontent[i]) {
+				return false
+			}
 		}
-	}
-	return true
+		return true
 	*/
 }
 
@@ -1456,7 +1456,7 @@ func (v *VDict) boolValue() bool {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VDict) Apply(args []Value) (Value, error) {
+func (v *VDict) Apply(args []Value, ctxt interface{}) (Value, error) {
 	if len(args) < 1 || !args[0].IsSymbol() {
 		return nil, fmt.Errorf("dict indexing requires a key")
 	}
@@ -1494,7 +1494,7 @@ func (v *VDict) TailValue() Value {
 }
 
 func (v *VDict) IsAtom() bool {
-	return false   // ?
+	return false // ?
 }
 
 func (v *VDict) IsSymbol() bool {
@@ -1538,7 +1538,7 @@ func (v *VDict) IsNil() bool {
 }
 
 func (v *VDict) IsEqual(vv Value) bool {
-	return v == vv    // pointer equality due to mutability
+	return v == vv // pointer equality due to mutability
 }
 
 func (v *VDict) Kind() string {
@@ -1568,4 +1568,3 @@ func (v *VDict) IsDict() bool {
 func (v *VDict) getDict() map[string]Value {
 	return v.content
 }
-

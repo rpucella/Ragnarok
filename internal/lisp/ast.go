@@ -8,22 +8,22 @@ const DEF_VALUE = 0
 const DEF_FUNCTION = 1
 
 type Def struct {
-	Name string
-	Type int
+	Name   string
+	Type   int
 	Params []string
-	Body AST
+	Body   AST
 }
 
 type AST interface {
-	Eval(*Env) (Value, error)
-	evalPartial(*Env) (*PartialResult, error)
+	Eval(*Env, interface{}) (Value, error)
+	evalPartial(*Env, interface{}) (*PartialResult, error)
 	Str() string
 }
 
 type PartialResult struct {
 	exp AST
 	env *Env
-	val Value  // val is null when the result is still partial
+	val Value // val is null when the result is still partial
 }
 
 type Literal struct {
@@ -50,59 +50,59 @@ type Quote struct {
 }
 
 type LetRec struct {
-	names []string
+	names  []string
 	params [][]string
 	bodies []AST
-	body AST
+	body   AST
 }
 
 func NewDef(name string, typ int, params []string, body AST) *Def {
-     return &Def{name, typ, params, body}
+	return &Def{name, typ, params, body}
 }
 
 func NewId(name string) *Id {
-     return &Id{name}
+	return &Id{name}
 }
 
 func NewLiteral(val Value) *Literal {
-     return &Literal{val}
+	return &Literal{val}
 }
 
 func NewQuote(val Value) *Quote {
-     return &Quote{val}
+	return &Quote{val}
 }
 
 func NewIf(cnd AST, thn AST, els AST) *If {
-     return &If{cnd, thn, els}
+	return &If{cnd, thn, els}
 }
 
 func NewLetRec(names []string, params [][]string, bodies []AST, body AST) *LetRec {
-     return &LetRec{names, params, bodies, body}
+	return &LetRec{names, params, bodies, body}
 }
 
 func NewApply(fn AST, args []AST) *Apply {
-     return &Apply{fn, args}
+	return &Apply{fn, args}
 }
 
-func defaultEvalPartial(e AST, env *Env) (*PartialResult, error) {
-        // Partial evaluation
-        // Sometimes return an expression to evaluate next along 
-        // with an environment for evaluation.
-        // val is null when the result is in fact a value.
-	
-	v, err := e.Eval(env)
+func defaultEvalPartial(e AST, env *Env, ctxt interface{}) (*PartialResult, error) {
+	// Partial evaluation
+	// Sometimes return an expression to evaluate next along
+	// with an environment for evaluation.
+	// val is null when the result is in fact a value.
+
+	v, err := e.Eval(env, ctxt)
 	if err != nil {
 		return nil, err
 	}
 	return &PartialResult{nil, nil, v}, nil
 }
 
-func defaultEval(e AST, env *Env) (Value, error) {
+func defaultEval(e AST, env *Env, ctxt interface{}) (Value, error) {
 	// evaluation with tail call optimization
 	var currExp AST = e
 	currEnv := env
 	for {
-		partial, err := currExp.evalPartial(currEnv)
+		partial, err := currExp.evalPartial(currEnv, ctxt)
 		if err != nil {
 			return nil, err
 		}
@@ -114,36 +114,36 @@ func defaultEval(e AST, env *Env) (Value, error) {
 	}
 }
 
-func (e *Literal) Eval(env *Env) (Value, error) {
+func (e *Literal) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return e.val, nil
 }
 
-func (e *Literal) evalPartial(env *Env) (*PartialResult, error) {
-	return defaultEvalPartial(e, env)
+func (e *Literal) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+	return defaultEvalPartial(e, env, ctxt)
 }
 
 func (e *Literal) Str() string {
 	return fmt.Sprintf("Literal[%s]", e.val.Str())
 }
 
-func (e *Id) Eval(env *Env) (Value, error) {
+func (e *Id) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return env.find(e.name)
 }
 
-func (e *Id) evalPartial(env *Env) (*PartialResult, error) {
-	return defaultEvalPartial(e, env)
+func (e *Id) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+	return defaultEvalPartial(e, env, ctxt)
 }
 
 func (e *Id) Str() string {
 	return fmt.Sprintf("Id[%s]", e.name)
 }
 
-func (e *If) Eval(env *Env) (Value, error) {
-	return defaultEval(e, env)
+func (e *If) Eval(env *Env, ctxt interface{}) (Value, error) {
+	return defaultEval(e, env, ctxt)
 }
 
-func (e *If) evalPartial(env *Env) (*PartialResult, error) { 
-	c, err := e.cnd.Eval(env)
+func (e *If) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+	c, err := e.cnd.Eval(env, ctxt)
 	if err != nil {
 		return nil, err
 	}
@@ -158,18 +158,18 @@ func (e *If) Str() string {
 	return fmt.Sprintf("If[%s %s %s]", e.cnd.Str(), e.thn.Str(), e.els.Str())
 }
 
-func (e *Apply) Eval(env *Env) (Value, error) {
-	return defaultEval(e, env)
+func (e *Apply) Eval(env *Env, ctxt interface{}) (Value, error) {
+	return defaultEval(e, env, ctxt)
 }
 
-func (e *Apply) evalPartial(env *Env) (*PartialResult, error) {
-	f, err := e.fn.Eval(env)
+func (e *Apply) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+	f, err := e.fn.Eval(env, ctxt)
 	if err != nil {
 		return nil, err
 	}
 	args := make([]Value, len(e.args))
 	for i := range args {
-		args[i], err = e.args[i].Eval(env)
+		args[i], err = e.args[i].Eval(env, ctxt)
 		if err != nil {
 			return nil, err
 		}
@@ -181,7 +181,7 @@ func (e *Apply) evalPartial(env *Env) (*PartialResult, error) {
 		newEnv := ff.env.Layer(ff.params, args)
 		return &PartialResult{ff.body, newEnv, nil}, nil
 	}
-	v, err := f.Apply(args)
+	v, err := f.Apply(args, ctxt)
 	if err != nil {
 		return nil, err
 	}
@@ -196,23 +196,23 @@ func (e *Apply) Str() string {
 	return fmt.Sprintf("Apply[%s%s]", e.fn.Str(), strArgs)
 }
 
-func (e *Quote) Eval(env *Env) (Value, error) {
+func (e *Quote) Eval(env *Env, ctxt interface{}) (Value, error) {
 	return e.val, nil
 }
 
-func (e *Quote) evalPartial(env *Env) (*PartialResult, error) {
-	return defaultEvalPartial(e, env)
+func (e *Quote) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
+	return defaultEvalPartial(e, env, ctxt)
 }
 
 func (e *Quote) Str() string {
 	return fmt.Sprintf("Quote[%s]", e.val.Str())
 }
 
-func (e *LetRec) Eval(env *Env) (Value, error) {
-	return defaultEval(e, env)
+func (e *LetRec) Eval(env *Env, ctxt interface{}) (Value, error) {
+	return defaultEval(e, env, ctxt)
 }
 
-func (e *LetRec) evalPartial(env *Env) (*PartialResult, error) {
+func (e *LetRec) evalPartial(env *Env, ctxt interface{}) (*PartialResult, error) {
 	if len(e.names) != len(e.params) || len(e.names) != len(e.bodies) {
 		return nil, errors.New("malformed letrec (names, params, bodies)")
 	}

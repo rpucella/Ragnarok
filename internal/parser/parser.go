@@ -1,9 +1,9 @@
 package parser
 
 import (
-       "errors"
-       "fmt"
-       "rpucella.net/ragnarok/internal/lisp"
+	"errors"
+	"fmt"
+	"rpucella.net/ragnarok/internal/lisp"
 )
 
 const kw_DEF string = "def"
@@ -20,7 +20,7 @@ const kw_MACRO string = "macro"
 const kw_AND string = "and"
 const kw_OR string = "or"
 
-var fresh = (func(init int) func(string)string { 
+var fresh = (func(init int) func(string) string {
 	id := init
 	return func(prefix string) string {
 		result := fmt.Sprintf("%s_%d", prefix, id)
@@ -56,9 +56,9 @@ func ParseDef(sexp lisp.Value) (*lisp.Def, error) {
 			return nil, errors.New("too many arguments to def")
 		}
 		return lisp.NewDef(name, lisp.DEF_VALUE, nil, value), nil
-	}		
+	}
 	if defBlock.IsCons() {
-		if !defBlock.HeadValue().IsSymbol() { 
+		if !defBlock.HeadValue().IsSymbol() {
 			return nil, errors.New("definition name not a symbol")
 		}
 		name := defBlock.HeadValue().StrValue()
@@ -92,7 +92,7 @@ func ParseExpr(sexp lisp.Value) (lisp.AST, error) {
 		return expr, err
 	}
 	expr, err = parseIf(sexp)
-	if err != nil  || expr != nil {
+	if err != nil || expr != nil {
 		return expr, err
 	}
 	expr, err = parseFunction(sexp)
@@ -515,7 +515,7 @@ func parseDo(sexp lisp.Value) (lisp.AST, error) {
 
 func makeDo(exprs []lisp.AST) lisp.AST {
 	if len(exprs) > 0 {
-		result := exprs[len(exprs) - 1]
+		result := exprs[len(exprs)-1]
 		for i := len(exprs) - 2; i >= 0; i-- {
 			result = makeLet([]string{fresh("__temp")}, []lisp.AST{exprs[i]}, result)
 		}

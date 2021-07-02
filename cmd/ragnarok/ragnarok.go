@@ -21,4 +21,3 @@ func main() {
 	eco := initialize()
 	shell(eco)
 }
-

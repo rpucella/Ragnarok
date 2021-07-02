@@ -1,9 +1,9 @@
 package main
 
 import (
-       "fmt"
-       "rpucella.net/ragnarok/internal/lisp"
-       "rpucella.net/ragnarok/internal/reader"
+	"fmt"
+	"rpucella.net/ragnarok/internal/lisp"
+	"rpucella.net/ragnarok/internal/reader"
 )
 
 func test() {
@@ -18,7 +18,7 @@ func test() {
 	test_read()
 }
 
-func primitiveAdd(args []lisp.Value) (lisp.Value, error) {
+func primitiveAdd(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
 	var result int
 	for _, val := range args {
 		result += val.IntValue()
@@ -26,7 +26,7 @@ func primitiveAdd(args []lisp.Value) (lisp.Value, error) {
 	return lisp.NewVInteger(result), nil
 }
 
-func primitiveMult(args []lisp.Value) (lisp.Value, error) {
+func primitiveMult(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
 	var result int = 1
 	for _, val := range args {
 		result *= val.IntValue()
@@ -58,12 +58,12 @@ func test_value_plus() {
 	var v3 lisp.Value = lisp.NewVInteger(30)
 	var vp lisp.Value = lisp.NewVPrimitive("+", primitiveAdd)
 	var args []lisp.Value = []lisp.Value{v1, v2, v3}
-	vr, _ := vp.Apply(args)
+	vr, _ := vp.Apply(args, nil)
 	fmt.Println(vp.Str(), "->", vr.IntValue())
 }
 
 func evalDisplay(e lisp.AST, env *lisp.Env) string {
-	v, _ := e.Eval(env)
+	v, _ := e.Eval(env, nil)
 	return v.Display()
 }
 

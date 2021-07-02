@@ -1,40 +1,50 @@
 package main
 
 import (
-       "fmt"
-       "bufio"
-       "os"
-       "strings"
-       "io"
-       "rpucella.net/ragnarok/internal/lisp"
-       "rpucella.net/ragnarok/internal/reader"
-       "rpucella.net/ragnarok/internal/parser"
+	"bufio"
+	"fmt"
+	"io"
+	"os"
+	"rpucella.net/ragnarok/internal/lisp"
+	"rpucella.net/ragnarok/internal/parser"
+	"rpucella.net/ragnarok/internal/reader"
+	"strings"
 )
 
-var context = Context{"", "", nil}
+// A context contains anything interesting to the execution
 
-func shell(eco *Ecosystem) {
-	env := eco.mkEnv("*scratch*", map[string]lisp.Value{})
-	context.currentModule = "*scratch*"
-	context.nextCurrentModule = "*scratch*"
-	context.ecosystem = eco
+// Right now, it's a global variable
+
+// maybe we want to make it available via the ecosystem (thus during evaluation of forms)
+// and passing it to primitives (so that they can use it to access, well, the context)
+
+type Context struct {
+	currentModule     string
+	nextCurrentModule string // to switch modules, set nextCurrentModule != nil
+	ecosystem         Ecosystem
+}
+
+func shell(eco Ecosystem) {
+	env := lisp.NewEnv(map[string]lisp.Value{}, nil, eco.modules)
+	eco.addShell("*scratch*", env)
+	context := &Context{"*scratch*", "", eco}
 	stdInReader := bufio.NewReader(os.Stdin)
 	showModules(env)
 	for {
-		if context.nextCurrentModule != context.currentModule {
+		if context.nextCurrentModule != "" {
 			current := context.currentModule
 			context.currentModule = context.nextCurrentModule
+			context.nextCurrentModule = ""
 			new_env, err := eco.get(context.currentModule)
 			if err != nil {
 				// reset the module names
 				context.currentModule = current
-				context.nextCurrentModule = current
 				fmt.Println("ERROR -", err.Error())
 			} else {
 				env = new_env
 			}
 		}
-		fmt.Printf("%s> ", context.currentModule)
+		fmt.Printf("%s | ", context.currentModule)
 		text, err := stdInReader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -53,18 +63,18 @@ func shell(eco *Ecosystem) {
 		}
 		// check if it's a declaration
 		d, err := parser.ParseDef(v)
-		if err != nil { 
+		if err != nil {
 			fmt.Println("PARSE ERROR -", err.Error())
 			continue
 		}
 		if d != nil {
-			if d.Type == lisp.DEF_FUNCTION { 
+			if d.Type == lisp.DEF_FUNCTION {
 				env.Update(d.Name, lisp.NewVFunction(d.Params, d.Body, env))
 				fmt.Println(d.Name)
 				continue
 			}
 			if d.Type == lisp.DEF_VALUE {
-				v, err := d.Body.Eval(env)
+				v, err := d.Body.Eval(env, context)
 				if err != nil {
 					fmt.Println("EVAL ERROR -", err.Error())
 					continue
@@ -78,51 +88,25 @@ func shell(eco *Ecosystem) {
 		}
 		// check if it's an expression
 		e, err := parser.ParseExpr(v)
-		if err != nil { 
+		if err != nil {
 			fmt.Println("PARSE ERROR -", err.Error())
 			continue
 		}
 		///fmt.Println("expr =", e.str())
-		v, err = e.Eval(env)
+		v, err = e.Eval(env, context)
 		if err != nil {
 			fmt.Println("EVAL ERROR -", err.Error())
 			continue
 		}
-		if !v.IsNil() { 
+		if !v.IsNil() {
 			fmt.Println(v.Display())
 		}
 	}
 }
 
 func bail() {
-	fmt.Println("tada")
+	fmt.Println("")    // tada, arrivederci, auf wiedersehen, hasta la vista, goodbye, au revoir
 	os.Exit(0)
-}
-
-func initialize() *Ecosystem {
-	eco := mkEcosystem()
-	coreBindings := corePrimitives()
-	coreBindings["true"] = lisp.NewVBoolean(true)
-	coreBindings["false"] = lisp.NewVBoolean(false)
-	eco.mkEnv("core", coreBindings)
-	testBindings := map[string]lisp.Value{
-		"a": lisp.NewVInteger(99),
-		"square": lisp.NewVPrimitive("square", func(args []lisp.Value) (lisp.Value, error) {
-			if len(args) != 1 || !args[0].IsNumber() {
-				return nil, fmt.Errorf("argument to square should be int")
-			}
-			return lisp.NewVInteger(args[0].IntValue() * args[0].IntValue()), nil
-		}),
-	}
-	eco.mkEnv("test", testBindings)
-	shellBindings := shellPrimitives()
-	eco.mkEnv("shell", shellBindings)
-	configBindings := map[string]lisp.Value{
-		"lookup-path": lisp.NewVReference(lisp.NewVCons(lisp.NewVSymbol("shell"), lisp.NewVCons(lisp.NewVSymbol("core"), &lisp.VEmpty{}))),
-		"editor": lisp.NewVReference(lisp.NewVString("emacs")),
-	}
-	eco.mkEnv("config", configBindings)
-	return eco
 }
 
 func showModules(env *lisp.Env) {
@@ -130,8 +114,9 @@ func showModules(env *lisp.Env) {
 	if err != nil {
 		return
 	}
-	v, err := modulesFn.Apply([]lisp.Value{})
+	v, err := modulesFn.Apply([]lisp.Value{}, nil)
 	if err != nil {
-		return}
+		return
+	}
 	fmt.Println("Modules", v.Display())
 }

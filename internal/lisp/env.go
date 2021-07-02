@@ -6,13 +6,13 @@ import "strings"
 type Env struct {
 	bindings map[string]Value
 	previous *Env
-	modules map[string](*Env)
+	modules  map[string](*Env)
 }
 
 const moduleSep = "::"
 
 func NewEnv(bindings map[string]Value, previous *Env, modules map[string]*Env) *Env {
-     return &Env{bindings, previous, modules}
+	return &Env{bindings, previous, modules}
 }
 
 func (env *Env) find(name string) (Value, error) {
@@ -38,7 +38,7 @@ func (env *Env) find(name string) (Value, error) {
 	}
 	modules := lookup_path.getValue()
 	for modules.IsCons() {
-		if modules.HeadValue().IsSymbol() { 
+		if modules.HeadValue().IsSymbol() {
 			result, err := env.Lookup(modules.HeadValue().StrValue(), name)
 			if err == nil {
 				return result, nil
@@ -60,7 +60,7 @@ func (env *Env) Lookup(module string, name string) (Value, error) {
 	}
 	return v, nil
 }
- 
+
 func (env *Env) Update(name string, v Value) {
 	env.bindings[name] = v
 }
@@ -78,4 +78,3 @@ func (env *Env) Layer(names []string, values []Value) *Env {
 	}
 	return &Env{bindings: bindings, previous: env, modules: env.modules}
 }
-

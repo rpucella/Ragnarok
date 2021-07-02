@@ -1,11 +1,11 @@
 package reader
 
 import (
-       "strconv"
-       "strings"
-       "regexp"
-       "errors"
-       "rpucella.net/ragnarok/internal/lisp"
+	"errors"
+	"regexp"
+	"rpucella.net/ragnarok/internal/lisp"
+	"strconv"
+	"strings"
 )
 
 func readToken(token string, s string) (string, string) {
@@ -61,7 +61,7 @@ func readString(s string) (lisp.Value, string) {
 	if result == "" {
 		return nil, s
 	}
-	return lisp.NewVString(result[1:len(result) - 1]), rest
+	return lisp.NewVString(result[1 : len(result)-1]), rest
 }
 
 func readInteger(s string) (lisp.Value, string) {

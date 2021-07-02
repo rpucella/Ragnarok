@@ -1,18 +1,18 @@
 package main
 
 import (
-       "rpucella.net/ragnarok/internal/lisp"
+	"rpucella.net/ragnarok/internal/lisp"
 )
 
-func min (a int, b int) int {
-	if (a > b) {
+func min(a int, b int) int {
+	if a > b {
 		return b
 	}
 	return a
 }
 
-func max (a int, b int) int {
-	if (a < b) {
+func max(a int, b int) int {
+	if a < b {
 		return b
 	}
 	return a
