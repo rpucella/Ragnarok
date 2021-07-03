@@ -8,20 +8,6 @@ import (
 
 // An ecosystem is a global set of environments associated with modules, shells, or buffers
 
-type envKind int
-
-const (
-	ENV_MODULE envKind = iota
-	ENV_SHELL
-	ENV_BUFFER
-)
-
-type NamedEnv struct {
-	kind envKind
-	name string
-	env  *evaluator.Env
-}
-
 type Ecosystem struct {
 	modules map[string]*evaluator.Env
 	shells  map[string]*evaluator.Env
@@ -48,26 +34,28 @@ func NewEcosystem() Ecosystem {
 	return Ecosystem{map[string]*evaluator.Env{}, map[string]*evaluator.Env{}, map[string]*evaluator.Env{}}
 }
 
-func (eco Ecosystem) addModule(name string, env *evaluator.Env) {
-	eco.modules[name] = env
+func (eco Ecosystem) addModule(name string, bindings map[string]value.Value) {
+	eco.modules[name] = evaluator.NewEnv(bindings, nil, eco.modules)
 }
 
-func (eco Ecosystem) addShell(name string, env *evaluator.Env) {
-	eco.shells[name] = env
+func (eco Ecosystem) addShell(name string, bindings map[string]value.Value) {
+	eco.shells[name] = evaluator.NewEnv(bindings, nil, eco.modules)
 }
 
-func (eco Ecosystem) addBuffer(name string, env *evaluator.Env) {
-	eco.buffers[name] = env
+func (eco Ecosystem) addBuffer(name string, bindings map[string]value.Value) {
+	eco.buffers[name] = evaluator.NewEnv(bindings, nil, eco.modules)
+
 }
 
-func initialize() Ecosystem {
-	eco := NewEcosystem()
-	coreBindings := corePrimitives()
-	coreBindings["true"] = value.NewVBoolean(true)
-	coreBindings["false"] = value.NewVBoolean(false)
-	coreEnv := evaluator.NewEnv(coreBindings, nil, eco.modules)
-	eco.addModule("core", coreEnv)
-	testBindings := map[string]value.Value{
+func coreBindings() map[string]value.Value {
+	bindings := corePrimitives()
+	bindings["true"] = value.NewVBoolean(true)
+	bindings["false"] = value.NewVBoolean(false)
+	return bindings
+}
+
+func testBindings() map[string]value.Value {
+	bindings := map[string]value.Value{
 		"a": value.NewVInteger(99),
 		"square": value.NewVPrimitive("square", func(args []value.Value, ctxt interface{}) (value.Value, error) {
 			if len(args) != 1 || !value.IsNumber(args[0]) {
@@ -76,16 +64,18 @@ func initialize() Ecosystem {
 			return value.NewVInteger(args[0].GetInt() * args[0].GetInt()), nil
 		}),
 	}
-	testEnv := evaluator.NewEnv(testBindings, nil, eco.modules)
-	eco.addModule("test", testEnv)
-	shellBindings := shellPrimitives()
-	shellEnv := evaluator.NewEnv(shellBindings, nil, eco.modules)
-	eco.addModule("shell", shellEnv)
-	configBindings := map[string]value.Value{
+	return bindings
+}
+
+func shellBindings() map[string]value.Value {
+	bindings := shellPrimitives()
+	return bindings
+}
+
+func configBindings() map[string]value.Value {
+	bindings := map[string]value.Value{
 		"lookup-path": value.NewVReference(value.NewVCons(value.NewVSymbol("shell"), value.NewVCons(value.NewVSymbol("core"), &value.VEmpty{}))),
 		"editor":      value.NewVReference(value.NewVString("emacs")),
 	}
-	configEnv := evaluator.NewEnv(configBindings, nil, eco.modules)
-	eco.addModule("config", configEnv)
-	return eco
+	return bindings
 }

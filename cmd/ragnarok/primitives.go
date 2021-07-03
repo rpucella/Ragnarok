@@ -524,7 +524,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 					currents[i] = currents[i].GetTail()
 				}
 			}
-			return &value.VNil{}, nil
+			return value.NewNil(), nil
 		},
 	},
 
@@ -645,7 +645,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 	// 			return nil, err
 	// 		}
 	// 		args[0].setValue(args[1])
-	// 		return &value.VNil{}, nil
+	// 		return value.NewNil(), nil
 	// 	},
 	// },
 
@@ -754,22 +754,26 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 		"quit", 0, 0,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
 			bail()
-			return &value.VNil{}, nil
+			return value.NewNil(), nil
 		},
 	},
 
 	PrimitiveDesc{
-		"go", 1, 1,
+		"go", 0, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			if err := checkArgType(name, args[0], IsSymbol); err != nil {
-				return nil, err
-			}
 			context, ok := ctxt.(*Context)
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
+			if len(args) == 0 {
+				context.nextCurrentModule = context.homeModule
+				return value.NewNil(), nil
+			}
+			if err := checkArgType(name, args[0], IsSymbol); err != nil {
+				return nil, err
+			}
 			context.nextCurrentModule = args[0].GetString()
-			return &value.VNil{}, nil
+			return value.NewNil(), nil
 		},
 	},
 
@@ -801,7 +805,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			context.report("   (modules)   see available modules")
 			context.report("  (go 'buff)   navigate to a particular buffer")
 			context.report("")
-			return &value.VNil{}, nil
+			return value.NewNil(), nil
 		},
 	},
 
@@ -812,7 +816,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 				fmt.Print(arg.Display(), " ")
 			}
 			fmt.Println()
-			return &value.VNil{}, nil
+			return value.NewNil(), nil
 		},
 	},
 
@@ -825,7 +829,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			}
 			timeTrack := func(start time.Time) {
 				elapsed := time.Since(start)
-				context.report(fmt.Sprintf("Call took %s", elapsed))
+				context.report(fmt.Sprintf("Time: %s", elapsed))
 			}
 			defer timeTrack(time.Now())
 			if err := checkArgType(name, args[0], IsFunction); err != nil {

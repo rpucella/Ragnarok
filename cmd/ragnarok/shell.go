@@ -20,6 +20,7 @@ import (
 // and passing it to primitives (so that they can use it to access, well, the context)
 
 type Context struct {
+	homeModule        string
 	currentModule     string
 	nextCurrentModule string // to switch modules, set nextCurrentModule != nil
 	ecosystem         Ecosystem
@@ -27,9 +28,9 @@ type Context struct {
 }
 
 func shell(eco Ecosystem) {
-	env := evaluator.NewEnv(map[string]value.Value{}, nil, eco.modules)
-	eco.addShell("*scratch*", env)
-	context := &Context{"*scratch*", "", eco, func(str string) { fmt.Println(";;", str) }}
+	eco.addShell("*scratch*", map[string]value.Value{})
+	env, _ := eco.get("*scratch*")
+	context := &Context{"*scratch*", "*scratch*", "", eco, func(str string) { fmt.Println(";;", str) }}
 	stdInReader := bufio.NewReader(os.Stdin)
 	showModules(env)
 	for {
@@ -46,7 +47,7 @@ func shell(eco Ecosystem) {
 				env = new_env
 			}
 		}
-		fmt.Printf("%s | ", context.currentModule)
+		fmt.Printf("\n%s | ", context.currentModule)
 		text, err := stdInReader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {

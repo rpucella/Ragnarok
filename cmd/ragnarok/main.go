@@ -18,6 +18,10 @@ const banner = `
 
 func main() {
 	fmt.Println(banner)
-	eco := initialize()
+	eco := NewEcosystem()
+	eco.addModule("core", coreBindings())
+	eco.addModule("test", testBindings())
+	eco.addModule("shell", shellBindings())
+	eco.addModule("config", configBindings())
 	shell(eco)
 }

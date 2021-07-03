@@ -200,6 +200,12 @@ func NewVString(val string) *VString {
 type VNil struct {
 }
 
+var defaultNil *VNil = &VNil{}
+
+func NewNil() *VNil {
+	return defaultNil
+}
+
 type VReference struct {
 	content Value
 }
