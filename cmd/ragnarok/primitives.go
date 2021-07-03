@@ -804,7 +804,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			return &value.VNil{}, nil
 		},
 	},
-	
+
 	PrimitiveDesc{
 		"print", 0, -1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {

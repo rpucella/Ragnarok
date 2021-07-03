@@ -83,7 +83,7 @@ func IsString(v Value) bool {
 }
 
 func IsFunction(v Value) bool {
-	k := v.Kind() 
+	k := v.Kind()
 	return k == V_FUNCTION
 }
 

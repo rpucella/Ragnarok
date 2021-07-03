@@ -1,8 +1,8 @@
 package evaluator
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	"rpucella.net/ragnarok/internal/value"
 )
 
@@ -138,13 +138,12 @@ func (e *LetRec) evalPartial(env *Env, ctxt interface{}) (*partialResult, error)
 	newEnv := env.Layer(e.names, nil)
 	for i, name := range e.names {
 		/*
-		newEnv.Update(name, value.NewVPrimitive("__letrec__", func(args []value.Value, context interface{}) (value.Value, error) {
-			newNewEnv := newEnv.Layer(e.params[i], args)
-			return e.bodies[i].Eval(newNewEnv, context)
-		}))      //e.bodies[i], newEnv})
-                */
+			newEnv.Update(name, value.NewVPrimitive("__letrec__", func(args []value.Value, context interface{}) (value.Value, error) {
+				newNewEnv := newEnv.Layer(e.params[i], args)
+				return e.bodies[i].Eval(newNewEnv, context)
+			}))      //e.bodies[i], newEnv})
+		*/
 		newEnv.Update(name, NewIFunction(e.params[i], e.bodies[i], newEnv))
 	}
 	return &partialResult{e.body, newEnv, nil}, nil
 }
-

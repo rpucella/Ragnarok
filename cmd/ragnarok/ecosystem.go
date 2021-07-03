@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"rpucella.net/ragnarok/internal/value"
 	"rpucella.net/ragnarok/internal/evaluator"
+	"rpucella.net/ragnarok/internal/value"
 )
 
 // An ecosystem is a global set of environments associated with modules, shells, or buffers
@@ -19,12 +19,12 @@ const (
 type NamedEnv struct {
 	kind envKind
 	name string
-	env *evaluator.Env
+	env  *evaluator.Env
 }
 
 type Ecosystem struct {
 	modules map[string]*evaluator.Env
-	shells map[string]*evaluator.Env
+	shells  map[string]*evaluator.Env
 	buffers map[string]*evaluator.Env
 }
 
@@ -89,4 +89,3 @@ func initialize() Ecosystem {
 	eco.addModule("config", configEnv)
 	return eco
 }
-

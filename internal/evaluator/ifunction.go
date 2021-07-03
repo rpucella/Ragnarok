@@ -2,16 +2,16 @@ package evaluator
 
 import (
 	"fmt"
-	"strings"
 	"rpucella.net/ragnarok/internal/value"
+	"strings"
 )
 
 // interpreted function
 
 type IFunction struct {
 	params []string
-	body AST
-	env *Env
+	body   AST
+	env    *Env
 }
 
 func NewIFunction(params []string, body AST, env *Env) *IFunction {

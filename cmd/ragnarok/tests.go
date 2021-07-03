@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"rpucella.net/ragnarok/internal/evaluator"
-	"rpucella.net/ragnarok/internal/value"
 	"rpucella.net/ragnarok/internal/reader"
+	"rpucella.net/ragnarok/internal/value"
 )
 
 func test() {

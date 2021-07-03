@@ -6,9 +6,9 @@ import (
 	"io"
 	"os"
 	"rpucella.net/ragnarok/internal/evaluator"
-	"rpucella.net/ragnarok/internal/value"
 	"rpucella.net/ragnarok/internal/parser"
 	"rpucella.net/ragnarok/internal/reader"
+	"rpucella.net/ragnarok/internal/value"
 	"strings"
 )
 
@@ -113,7 +113,7 @@ func shell(eco Ecosystem) {
 }
 
 func bail() {
-	fmt.Println("")    // tada, arrivederci, auf wiedersehen, hasta la vista, goodbye, au revoir
+	fmt.Println("") // tada, arrivederci, auf wiedersehen, hasta la vista, goodbye, au revoir
 	os.Exit(0)
 }
 

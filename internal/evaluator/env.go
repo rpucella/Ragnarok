@@ -2,8 +2,8 @@ package evaluator
 
 import (
 	"fmt"
-	"strings"
 	"rpucella.net/ragnarok/internal/value"
+	"strings"
 )
 
 type Env struct {
