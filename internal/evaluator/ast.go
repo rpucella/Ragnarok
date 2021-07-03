@@ -18,15 +18,9 @@ type Def struct {
 
 type AST interface {
 	Eval(*Env, interface{}) (value.Value, error)
-	evalPartial(*Env, interface{}) (*partialResult, error)
+	evalPartial(*Env, interface{}) (AST, *Env, value.Value, error)
 	Str() string
 	Display() string
-}
-
-type partialResult struct {
-	exp AST
-	env *Env
-	val value.Value // val is null when the result is still partial
 }
 
 type Literal struct {
