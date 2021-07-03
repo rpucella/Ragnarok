@@ -20,7 +20,7 @@ func (v *Dict) Display() string {
 		s[i] = fmt.Sprintf("(%s %s)", k, vv.Display())
 		i++
 	}
-	return fmt.Sprintf("#(%s)", strings.Join(s, " "))
+	return fmt.Sprintf("#(dict %s)", strings.Join(s, " "))
 }
 
 func (v *Dict) GetInt() int {

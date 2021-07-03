@@ -13,7 +13,7 @@ func NewReference(content Value) *Reference {
 }
 
 func (v *Reference) Display() string {
-	return fmt.Sprintf("#<ref %s>", v.content.Display())
+	return fmt.Sprintf("#(ref %s)", v.content.Display())
 }
 
 func (v *Reference) GetInt() int {

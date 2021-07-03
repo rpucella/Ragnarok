@@ -20,6 +20,7 @@ type AST interface {
 	Eval(*Env, interface{}) (value.Value, error)
 	evalPartial(*Env, interface{}) (*partialResult, error)
 	Str() string
+	Display() string
 }
 
 type partialResult struct {
@@ -90,12 +91,24 @@ func (e *Literal) Str() string {
 	return fmt.Sprintf("Literal[%s]", e.val.Str())
 }
 
+func (e *Literal) Display() string {
+	return e.val.Display()
+}
+
 func (e *Id) Str() string {
 	return fmt.Sprintf("Id[%s]", e.name)
 }
 
+func (e *Id) Display() string {
+	return e.name
+}
+
 func (e *If) Str() string {
 	return fmt.Sprintf("If[%s %s %s]", e.cnd.Str(), e.thn.Str(), e.els.Str())
+}
+
+func (e *If) Display() string {
+	return fmt.Sprintf("(if %s %s %s)", e.cnd.Display(), e.thn.Display(), e.els.Display())
 }
 
 func (e *Apply) Str() string {
@@ -106,8 +119,20 @@ func (e *Apply) Str() string {
 	return fmt.Sprintf("Apply[%s%s]", e.fn.Str(), strArgs)
 }
 
+func (e *Apply) Display() string {
+	strArgs := ""
+	for _, item := range e.args {
+		strArgs += " " + item.Display()
+	}
+	return fmt.Sprintf("(%s%s)", e.fn.Display(), strArgs)
+}
+
 func (e *Quote) Str() string {
 	return fmt.Sprintf("Quote[%s]", e.val.Str())
+}
+
+func (e *Quote) Display() string {
+	return fmt.Sprintf("(quote %s)", e.val.Display())
 }
 
 func (e *LetRec) Str() string {
@@ -117,4 +142,13 @@ func (e *LetRec) Str() string {
 		bindings[i] = fmt.Sprintf("[%s [%s] %s]", e.names[i], params, e.bodies[i].Str())
 	}
 	return fmt.Sprintf("LetRec[%s %s]", strings.Join(bindings, " "), e.body.Str())
+}
+
+func (e *LetRec) Display() string {
+	bindings := make([]string, len(e.names))
+	for i := range e.names {
+		params := strings.Join(e.params[i], " ")
+		bindings[i] = fmt.Sprintf("(%s (%s) %s)", e.names[i], params, e.bodies[i].Display())
+	}
+	return fmt.Sprintf("(letrec %s %s)", strings.Join(bindings, " "), e.body.Display())
 }

@@ -19,7 +19,14 @@ func NewIFunction(params []string, body AST, env *Env) *IFunction {
 }
 
 func (v *IFunction) Display() string {
-	return fmt.Sprintf("#<fun %s>", strings.Join(v.params, " "))
+	strBody := v.body.Display()
+	showLen := 50
+	showCont := "..."
+	if len(strBody) < showLen {
+		showLen = len(strBody)
+		showCont = ""
+	}
+	return fmt.Sprintf("#[func (%s) %s%s]", strings.Join(v.params, " "), v.body.Display()[:showLen], showCont)
 }
 
 func (v *IFunction) GetInt() int {

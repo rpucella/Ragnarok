@@ -14,7 +14,7 @@ func NewPrimitive(name string, prim func([]Value, interface{}) (Value, error)) *
 }
 
 func (v *Primitive) Display() string {
-	return fmt.Sprintf("#<prim %s>", v.name)
+	return fmt.Sprintf("#[prim %s]", v.name)
 }
 
 func (v *Primitive) GetInt() int {

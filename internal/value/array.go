@@ -18,7 +18,7 @@ func (v *Array) Display() string {
 	for i, vv := range v.content {
 		s[i] = vv.Display()
 	}
-	return fmt.Sprintf("#[%s]", strings.Join(s, " "))
+	return fmt.Sprintf("#(array %s)", strings.Join(s, " "))
 }
 
 func (v *Array) GetInt() int {

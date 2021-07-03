@@ -14,9 +14,9 @@ func NewBoolean(val bool) *Boolean {
 
 func (v *Boolean) Display() string {
 	if v.val {
-		return "#t"
+		return "#true"
 	} else {
-		return "#f"
+		return "#false"
 	}
 }
 
