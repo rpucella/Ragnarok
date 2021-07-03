@@ -122,7 +122,7 @@ func showModules(env *evaluator.Env) {
 	if err != nil {
 		return
 	}
-	v, err := value.ApplyToCompletion(modulesFn, []value.Value{}, nil)
+	v, err := modulesFn.Apply([]value.Value{}, nil)
 	if err != nil {
 		return
 	}

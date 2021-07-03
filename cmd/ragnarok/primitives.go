@@ -325,7 +325,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if !value.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
-			return value.ApplyToCompletion(args[0], arguments, ctxt)
+			return args[0].Apply(arguments, ctxt)
 		},
 	},
 
@@ -473,7 +473,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				for i := range currents {
 					firsts[i] = currents[i].GetHead()
 				}
-				v, err := value.ApplyToCompletion(args[0], firsts, ctxt)
+				v, err := args[0].Apply(firsts, ctxt)
 				if err != nil {
 					return nil, err
 				}
@@ -516,7 +516,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				for i := range currents {
 					firsts[i] = currents[i].GetHead()
 				}
-				_, err := value.ApplyToCompletion(args[0], firsts, ctxt)
+				_, err := args[0].Apply(firsts, ctxt)
 				if err != nil {
 					return nil, err
 				}
@@ -540,7 +540,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			var current_result *value.VCons = nil
 			current := args[1]
 			for value.IsCons(current) {
-				v, err := value.ApplyToCompletion(args[0], []value.Value{current.GetHead()}, ctxt)
+				v, err := args[0].Apply([]value.Value{current.GetHead()}, ctxt)
 				if err != nil {
 					return nil, err
 				}
@@ -588,7 +588,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			result := args[2]
 			current = temp
 			for value.IsCons(current) {
-				v, err := value.ApplyToCompletion(args[0], []value.Value{current.GetHead(), result}, ctxt)
+				v, err := args[0].Apply([]value.Value{current.GetHead(), result}, ctxt)
 				if err != nil {
 					return nil, err
 				}
@@ -613,7 +613,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			result := args[2]
 			current := args[1]
 			for value.IsCons(current) {
-				v, err := value.ApplyToCompletion(args[0], []value.Value{result, current.GetHead()}, ctxt)
+				v, err := args[0].Apply([]value.Value{result, current.GetHead()}, ctxt)
 				if err != nil {
 					return nil, err
 				}
@@ -843,7 +843,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			if !value.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
-			return value.ApplyToCompletion(args[0], arguments, ctxt)
+			return args[0].Apply(arguments, ctxt)
 		},
 	},
 }

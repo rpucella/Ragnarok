@@ -10,7 +10,6 @@ type Kind int
 const (
 	V_INTEGER Kind = iota
 	V_BOOLEAN
-	V_PRIMITIVE
 	V_FUNCTION
 	V_EMPTY
 	V_CONS
@@ -34,20 +33,19 @@ type Value interface {
 	SetValue(Value)
 	GetArray() []Value
 	GetMap() map[string]Value
-	Apply([]Value, interface{}) (Value, bool, error)
+	Apply([]Value, interface{}) (Value, error)
 	// internal methods
-	isTrue() bool
-	isEqual(Value) bool
-	displayCDR() string
+	IsTrue() bool
+	IsEqual(Value) bool
 	//isEq() bool    -- don't think we need pointer equality for now - = is enough?
 }
 
 func IsEqual(v1 Value, v2 Value) bool {
-	return v1.isEqual(v2)
+	return v1.IsEqual(v2)
 }
 
 func IsTrue(v Value) bool {
-	return v.isTrue()
+	return v.IsTrue()
 }
 
 func IsAtom(v Value) bool {
@@ -86,7 +84,7 @@ func IsString(v Value) bool {
 
 func IsFunction(v Value) bool {
 	k := v.Kind() 
-	return k == V_FUNCTION || k == V_PRIMITIVE
+	return k == V_FUNCTION
 }
 
 func IsNil(v Value) bool {
@@ -101,35 +99,12 @@ func IsDict(v Value) bool {
 	return v.Kind() == V_DICT
 }
 
-func ApplyToCompletion(fn Value, args []Value, ctxt interface{}) (Value, error) {
-	v, completed, err := fn.Apply(args, ctxt)
-	if err != nil {
-		return nil, err
-	}
-	if completed {
-		return v, nil
-	}
-	empty := []Value{}
-	for {
-		// loop until completion
-		v, completed, err = v.Apply(empty, ctxt)
-		if err != nil {
-			return nil, err
-		}
-		if completed {
-			return v, nil
-		}
-	}
-}
-
 func Classify(v Value) string {
 	switch v.Kind() {
 	case V_INTEGER:
 		return "int"
 	case V_BOOLEAN:
 		return "bool"
-	case V_PRIMITIVE:
-		return "fun"
 	case V_EMPTY:
 		return "list"
 	case V_CONS:
@@ -253,10 +228,6 @@ func (v *VInteger) Display() string {
 	return fmt.Sprintf("%d", v.val)
 }
 
-func (v *VInteger) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VInteger) GetInt() int {
 	return v.val
 }
@@ -265,8 +236,8 @@ func (v *VInteger) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VInteger) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
-	return nil, true, fmt.Errorf("Value %s not applicable", v.Str())
+func (v *VInteger) Apply(args []Value, ctxt interface{}) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
 func (v *VInteger) Str() string {
@@ -281,11 +252,11 @@ func (v *VInteger) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VInteger) isTrue() bool {
+func (v *VInteger) IsTrue() bool {
 	return v.val != 0
 }
 
-func (v *VInteger) isEqual(vv Value) bool {
+func (v *VInteger) IsEqual(vv Value) bool {
 	return IsNumber(vv) && v.GetInt() == vv.GetInt()
 }
 
@@ -317,10 +288,6 @@ func (v *VBoolean) Display() string {
 	}
 }
 
-func (v *VBoolean) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VBoolean) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -329,8 +296,8 @@ func (v *VBoolean) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VBoolean) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
-	return nil, true, fmt.Errorf("Value %s not applicable", v.Str())
+func (v *VBoolean) Apply(args []Value, ctxt interface{}) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
 func (v *VBoolean) Str() string {
@@ -349,12 +316,12 @@ func (v *VBoolean) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VBoolean) isTrue() bool {
+func (v *VBoolean) IsTrue() bool {
 	return v.val
 }
 
-func (v *VBoolean) isEqual(vv Value) bool {
-	return IsBool(vv) && v.isTrue() == vv.isTrue()
+func (v *VBoolean) IsEqual(vv Value) bool {
+	return IsBool(vv) && v.IsTrue() == vv.IsTrue()
 }
 
 func (v *VBoolean) Kind() Kind {
@@ -381,10 +348,6 @@ func (v *VPrimitive) Display() string {
 	return fmt.Sprintf("#<prim %s>", v.name)
 }
 
-func (v *VPrimitive) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VPrimitive) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -393,10 +356,10 @@ func (v *VPrimitive) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VPrimitive) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
+func (v *VPrimitive) Apply(args []Value, ctxt interface{}) (Value, error) {
 	result, err := v.primitive(args, ctxt)
 	// primitives always run to completion
-	return result, true, err
+	return result, err
 }
 
 func (v *VPrimitive) Str() string {
@@ -411,16 +374,16 @@ func (v *VPrimitive) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VPrimitive) isTrue() bool {
+func (v *VPrimitive) IsTrue() bool {
 	return true
 }
 
-func (v *VPrimitive) isEqual(vv Value) bool {
+func (v *VPrimitive) IsEqual(vv Value) bool {
 	return v == vv // pointer equality
 }
 
 func (v *VPrimitive) Kind() Kind {
-	return V_PRIMITIVE
+	return V_FUNCTION
 }
 
 func (v *VPrimitive) GetValue() Value {
@@ -443,10 +406,6 @@ func (v *VEmpty) Display() string {
 	return "()"
 }
 
-func (v *VEmpty) displayCDR() string {
-	return ")"
-}
-
 func (v *VEmpty) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -455,8 +414,8 @@ func (v *VEmpty) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VEmpty) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
-	return nil, true, fmt.Errorf("Value %s not applicable", v.Str())
+func (v *VEmpty) Apply(args []Value, ctxt interface{}) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
 func (v *VEmpty) Str() string {
@@ -471,11 +430,11 @@ func (v *VEmpty) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VEmpty) isTrue() bool {
+func (v *VEmpty) IsTrue() bool {
 	return false
 }
 
-func (v *VEmpty) isEqual(vv Value) bool {
+func (v *VEmpty) IsEqual(vv Value) bool {
 	return IsEmpty(vv)
 }
 
@@ -500,11 +459,19 @@ func (v *VEmpty) GetMap() map[string]Value {
 }
 
 func (v *VCons) Display() string {
-	return "(" + v.head.Display() + v.tail.displayCDR()
-}
-
-func (v *VCons) displayCDR() string {
-	return " " + v.head.Display() + v.tail.displayCDR()
+	if IsEmpty(v.tail) {
+		return "(" + v.head.Display() + ")"
+	}
+	result := "(" + v.head.Display()
+	curr := v.tail
+	for IsCons(curr) {
+		result += " " + curr.GetHead().Display()
+		curr = curr.GetTail()
+	}
+	if !IsEmpty(curr) {
+		return result + " <?>)"
+	}
+	return result + ")"
 }
 
 func (v *VCons) GetInt() int {
@@ -515,8 +482,8 @@ func (v *VCons) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VCons) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
-	return nil, true, fmt.Errorf("Value %s not applicable", v.Str())
+func (v *VCons) Apply(args []Value, ctxt interface{}) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
 func (v *VCons) Str() string {
@@ -531,11 +498,11 @@ func (v *VCons) GetTail() Value {
 	return v.tail
 }
 
-func (v *VCons) isTrue() bool {
+func (v *VCons) IsTrue() bool {
 	return true
 }
 
-func (v *VCons) isEqual(vv Value) bool {
+func (v *VCons) IsEqual(vv Value) bool {
 	if !IsCons(vv) {
 		return false
 	}
@@ -545,13 +512,13 @@ func (v *VCons) isEqual(vv Value) bool {
 		if !IsCons(curr2) {
 			return false
 		}
-		if !curr1.GetHead().isEqual(curr2.GetHead()) {
+		if !curr1.GetHead().IsEqual(curr2.GetHead()) {
 			return false
 		}
 		curr1 = curr1.GetTail()
 		curr2 = curr2.GetTail()
 	}
-	return curr1.isEqual(curr2) // should both be empty at the end
+	return curr1.IsEqual(curr2) // should both be empty at the end
 }
 
 func (v *VCons) Kind() Kind {
@@ -578,10 +545,6 @@ func (v *VSymbol) Display() string {
 	return v.name
 }
 
-func (v *VSymbol) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VSymbol) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -590,8 +553,8 @@ func (v *VSymbol) GetString() string {
 	return v.name
 }
 
-func (v *VSymbol) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
-	return nil, true, fmt.Errorf("Value %s not applicable", v.Str())
+func (v *VSymbol) Apply(args []Value, ctxt interface{}) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
 func (v *VSymbol) Str() string {
@@ -606,11 +569,11 @@ func (v *VSymbol) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VSymbol) isTrue() bool {
+func (v *VSymbol) IsTrue() bool {
 	return true
 }
 
-func (v *VSymbol) isEqual(vv Value) bool {
+func (v *VSymbol) IsEqual(vv Value) bool {
 	return IsSymbol(vv) && v.GetString() == vv.GetString()
 }
 
@@ -639,10 +602,6 @@ func (v *VFunction) Display() string {
 	return fmt.Sprintf("#<fun %s>", strings.Join(v.params, " "))
 }
 
-func (v *VFunction) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VFunction) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -651,9 +610,9 @@ func (v *VFunction) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VFunction) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
+func (v *VFunction) Apply(args []Value, ctxt interface{}) (Value, error) {
 	if len(v.params) != len(args) {
-		return nil, true, fmt.Errorf("Wrong number of arguments in application to %s", v.Str())
+		return nil, fmt.Errorf("Wrong number of arguments in application to %s", v.Str())
 	}
 	return v.function(args, ctxt)
 }
@@ -670,11 +629,11 @@ func (v *VFunction) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VFunction) isTrue() bool {
+func (v *VFunction) IsTrue() bool {
 	return true
 }
 
-func (v *VFunction) isEqual(vv Value) bool {
+func (v *VFunction) IsEqual(vv Value) bool {
 	return v == vv // pointer equality
 }
 
@@ -703,10 +662,6 @@ func (v *VString) Display() string {
 	return "\"" + v.val + "\""
 }
 
-func (v *VString) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VString) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -715,8 +670,8 @@ func (v *VString) GetString() string {
 	return v.val
 }
 
-func (v *VString) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
-	return nil, true, fmt.Errorf("Value %s not applicable", v.Str())
+func (v *VString) Apply(args []Value, ctxt interface{}) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
 func (v *VString) Str() string {
@@ -731,11 +686,11 @@ func (v *VString) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VString) isTrue() bool {
+func (v *VString) IsTrue() bool {
 	return (v.val != "")
 }
 
-func (v *VString) isEqual(vv Value) bool {
+func (v *VString) IsEqual(vv Value) bool {
 	return IsString(vv) && v.GetString() == vv.GetString()
 }
 
@@ -764,10 +719,6 @@ func (v *VNil) Display() string {
 	return "#nil"
 }
 
-func (v *VNil) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VNil) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -776,8 +727,8 @@ func (v *VNil) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VNil) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
-	return nil, true, fmt.Errorf("Value %s not applicable", v.Str())
+func (v *VNil) Apply(args []Value, ctxt interface{}) (Value, error) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
 func (v *VNil) Str() string {
@@ -792,11 +743,11 @@ func (v *VNil) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VNil) isTrue() bool {
+func (v *VNil) IsTrue() bool {
 	return false
 }
 
-func (v *VNil) isEqual(vv Value) bool {
+func (v *VNil) IsEqual(vv Value) bool {
 	return IsNil(vv)
 }
 
@@ -824,10 +775,6 @@ func (v *VReference) Display() string {
 	return fmt.Sprintf("#<ref %s>", v.content.Display())
 }
 
-func (v *VReference) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VReference) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -836,15 +783,15 @@ func (v *VReference) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VReference) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
+func (v *VReference) Apply(args []Value, ctxt interface{}) (Value, error) {
 	if len(args) > 1 {
-		return nil, true, fmt.Errorf("too many arguments %d to ref update", len(args))
+		return nil, fmt.Errorf("too many arguments %d to ref update", len(args))
 	}
 	if len(args) == 1 {
 		v.content = args[0]
-		return &VNil{}, true, nil
+		return &VNil{}, nil
 	}
-	return v.content, true, nil
+	return v.content, nil
 }
 
 func (v *VReference) Str() string {
@@ -859,11 +806,11 @@ func (v *VReference) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VReference) isTrue() bool {
+func (v *VReference) IsTrue() bool {
 	return false
 }
 
-func (v *VReference) isEqual(vv Value) bool {
+func (v *VReference) IsEqual(vv Value) bool {
 	return v == vv // pointer equality
 }
 
@@ -895,10 +842,6 @@ func (v *VArray) Display() string {
 	return fmt.Sprintf("#[%s]", strings.Join(s, " "))
 }
 
-func (v *VArray) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VArray) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -907,22 +850,22 @@ func (v *VArray) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VArray) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
+func (v *VArray) Apply(args []Value, ctxt interface{}) (Value, error) {
 	if len(args) < 1 || !IsNumber(args[0]) {
-		return nil, true, fmt.Errorf("array indexing requires an index")
+		return nil, fmt.Errorf("array indexing requires an index")
 	}
 	if len(args) > 2 {
-		return nil, true, fmt.Errorf("too many arguments %d to array update", len(args))
+		return nil, fmt.Errorf("too many arguments %d to array update", len(args))
 	}
 	idx := args[0].GetInt()
 	if idx < 0 || idx >= len(v.content) {
-		return nil, true, fmt.Errorf("array index out of bounds %d", idx)
+		return nil, fmt.Errorf("array index out of bounds %d", idx)
 	}
 	if len(args) == 2 {
 		v.content[idx] = args[1]
-		return &VNil{}, true, nil
+		return &VNil{}, nil
 	}
-	return v.content[idx], true, nil
+	return v.content[idx], nil
 }
 
 func (v *VArray) Str() string {
@@ -941,18 +884,18 @@ func (v *VArray) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VArray) isTrue() bool {
+func (v *VArray) IsTrue() bool {
 	return false
 }
 
-func (v *VArray) isEqual(vv Value) bool {
+func (v *VArray) IsEqual(vv Value) bool {
 	return v == vv // pointer equality because arrays will be mutable
 	/*
 		if !IsArray(vv) || len(v.content) != len(vv.GetArray()) {
 			return false}
 		vvcontent := vv.GetArray()
 		for i := range(v.content) {
-			if !v.content[i].isEqual(vvcontent[i]) {
+			if !v.content[i].IsEqual(vvcontent[i]) {
 				return false
 			}
 		}
@@ -990,10 +933,6 @@ func (v *VDict) Display() string {
 	return fmt.Sprintf("#(%s)", strings.Join(s, " "))
 }
 
-func (v *VDict) displayCDR() string {
-	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
-}
-
 func (v *VDict) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -1002,23 +941,23 @@ func (v *VDict) GetString() string {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VDict) Apply(args []Value, ctxt interface{}) (Value, bool, error) {
+func (v *VDict) Apply(args []Value, ctxt interface{}) (Value, error) {
 	if len(args) < 1 || !IsSymbol(args[0]) {
-		return nil, true, fmt.Errorf("dict indexing requires a key")
+		return nil, fmt.Errorf("dict indexing requires a key")
 	}
 	if len(args) > 2 {
-		return nil, true, fmt.Errorf("too many arguments %d to dict update", len(args))
+		return nil, fmt.Errorf("too many arguments %d to dict update", len(args))
 	}
 	key := args[0].GetString()
 	if len(args) == 2 {
 		v.content[key] = args[1]
-		return &VNil{}, true, nil
+		return &VNil{}, nil
 	}
 	result, ok := v.content[key]
 	if !ok {
-		return nil, true, fmt.Errorf("key %s not in dict", key)
+		return nil, fmt.Errorf("key %s not in dict", key)
 	}
-	return result, true, nil
+	return result, nil
 }
 
 func (v *VDict) Str() string {
@@ -1039,11 +978,11 @@ func (v *VDict) GetTail() Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
 
-func (v *VDict) isTrue() bool {
+func (v *VDict) IsTrue() bool {
 	return false
 }
 
-func (v *VDict) isEqual(vv Value) bool {
+func (v *VDict) IsEqual(vv Value) bool {
 	return v == vv // pointer equality due to mutability
 }
 

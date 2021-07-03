@@ -59,7 +59,7 @@ func test_value_plus() {
 	var v3 value.Value = value.NewVInteger(30)
 	var vp value.Value = value.NewVPrimitive("+", primitiveAdd)
 	var args []value.Value = []value.Value{v1, v2, v3}
-	vr, _ := value.ApplyToCompletion(vp, args, nil)
+	vr, _ := vp.Apply(args, nil)
 	fmt.Println(vp.Str(), "->", vr.GetInt())
 }
 

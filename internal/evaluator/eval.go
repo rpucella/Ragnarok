@@ -1,6 +1,7 @@
 package evaluator
 
 import (
+	"fmt"
 	"errors"
 	"rpucella.net/ragnarok/internal/value"
 )
@@ -83,25 +84,19 @@ func (e *Apply) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) 
 			return nil, err
 		}
 	}
-	// // this doesn't work if the VFunction doesn't hold the AST of the body!???
-	// if ff, ok := f.(*VFunction); ok {
-	// 	if len(ff.params) != len(args) {
-	// 		return nil, fmt.Errorf("Wrong number of arguments to application to %s", ff.Str())
-	// 	}
-	// 	newEnv := ff.env.Layer(ff.params, args)
-	// 	return &partialResult{ff.body, newEnv, nil}, nil
-	// }
-	v, completed, err := f.Apply(args, ctxt)
+	if ff, ok := f.(*IFunction); ok {
+		// do something special if we have an interpreted function!
+		if len(ff.params) != len(args) {
+			return nil, fmt.Errorf("Wrong number of arguments in application to %s", ff.Str())
+		}
+		newEnv := ff.env.Layer(ff.params, args)
+		return &partialResult{ff.body, newEnv, nil}, nil
+	}
+	v, err := f.Apply(args, ctxt)
 	if err != nil {
 		return nil, err
 	}
-	if completed {
-		// we're done
-		return &partialResult{nil, nil, v}, nil
-	}
-	result := NewApply(NewLiteral(v), []AST{})
-	// environment returned is effectively ignored since we're going to evaluate an application immediately
-	return &partialResult{result, env, nil}, nil
+	return &partialResult{nil, nil, v}, nil
 }
 
 func (e *Quote) Eval(env *Env, ctxt interface{}) (value.Value, error) {
@@ -142,10 +137,13 @@ func (e *LetRec) evalPartial(env *Env, ctxt interface{}) (*partialResult, error)
 	// all names initially allocated #nil
 	newEnv := env.Layer(e.names, nil)
 	for i, name := range e.names {
+		/*
 		newEnv.Update(name, value.NewVPrimitive("__letrec__", func(args []value.Value, context interface{}) (value.Value, error) {
 			newNewEnv := newEnv.Layer(e.params[i], args)
 			return e.bodies[i].Eval(newNewEnv, context)
 		}))      //e.bodies[i], newEnv})
+                */
+		newEnv.Update(name, NewIFunction(e.params[i], e.bodies[i], newEnv))
 	}
 	return &partialResult{e.body, newEnv, nil}, nil
 }
