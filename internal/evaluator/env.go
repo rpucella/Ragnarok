@@ -1,21 +1,24 @@
-package lisp
+package evaluator
 
-import "fmt"
-import "strings"
+import (
+	"fmt"
+	"strings"
+	"rpucella.net/ragnarok/internal/value"
+)
 
 type Env struct {
-	bindings map[string]Value
+	bindings map[string]value.Value
 	previous *Env
 	modules  map[string](*Env)
 }
 
 const moduleSep = "::"
 
-func NewEnv(bindings map[string]Value, previous *Env, modules map[string]*Env) *Env {
+func NewEnv(bindings map[string]value.Value, previous *Env, modules map[string]*Env) *Env {
 	return &Env{bindings, previous, modules}
 }
 
-func (env *Env) find(name string) (Value, error) {
+func (env *Env) find(name string) (value.Value, error) {
 	if strings.Contains(name, moduleSep) {
 		subnames := strings.Split(name, moduleSep)
 		if len(subnames) > 2 {
@@ -33,12 +36,12 @@ func (env *Env) find(name string) (Value, error) {
 	}
 	// can't find it, so look for it in the search path modules
 	lookup_path, err := env.Lookup("config", "lookup-path")
-	if err != nil || !IsRef(lookup_path) {
+	if err != nil || !value.IsRef(lookup_path) {
 		return nil, fmt.Errorf("no such identifier %s", name)
 	}
 	modules := lookup_path.GetValue()
-	for IsCons(modules) {
-		if IsSymbol(modules.GetHead()) {
+	for value.IsCons(modules) {
+		if value.IsSymbol(modules.GetHead()) {
 			result, err := env.Lookup(modules.GetHead().GetString(), name)
 			if err == nil {
 				return result, nil
@@ -49,7 +52,7 @@ func (env *Env) find(name string) (Value, error) {
 	return nil, fmt.Errorf("no such identifier %s", name)
 }
 
-func (env *Env) Lookup(module string, name string) (Value, error) {
+func (env *Env) Lookup(module string, name string) (value.Value, error) {
 	moduleEnv, ok := env.modules[module]
 	if !ok {
 		return nil, fmt.Errorf("no such module %s", module)
@@ -61,19 +64,19 @@ func (env *Env) Lookup(module string, name string) (Value, error) {
 	return v, nil
 }
 
-func (env *Env) Update(name string, v Value) {
+func (env *Env) Update(name string, v value.Value) {
 	env.bindings[name] = v
 }
 
-func (env *Env) Layer(names []string, values []Value) *Env {
+func (env *Env) Layer(names []string, values []value.Value) *Env {
 	// if values is nil or smaller than names, then
 	// remaining names are bound to #nil
-	bindings := map[string]Value{}
+	bindings := map[string]value.Value{}
 	for i, name := range names {
 		if values != nil && i < len(values) {
 			bindings[name] = values[i]
 		} else {
-			bindings[name] = &VNil{}
+			bindings[name] = &value.VNil{}
 		}
 	}
 	return &Env{bindings: bindings, previous: env, modules: env.modules}

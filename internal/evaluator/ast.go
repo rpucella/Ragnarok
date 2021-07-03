@@ -1,8 +1,11 @@
-package lisp
+package evaluator
 
-import "fmt"
-import "errors"
-import "strings"
+import (
+	"fmt"
+	"errors"
+	"strings"
+	"rpucella.net/ragnarok/internal/value"
+)
 
 const DEF_VALUE = 0
 const DEF_FUNCTION = 1
@@ -15,7 +18,7 @@ type Def struct {
 }
 
 type AST interface {
-	Eval(*Env, interface{}) (Value, error)
+	Eval(*Env, interface{}) (value.Value, error)
 	evalPartial(*Env, interface{}) (*partialResult, error)
 	Str() string
 }
@@ -23,11 +26,11 @@ type AST interface {
 type partialResult struct {
 	exp AST
 	env *Env
-	val Value // val is null when the result is still partial
+	val value.Value // val is null when the result is still partial
 }
 
 type Literal struct {
-	val Value
+	val value.Value
 }
 
 type Id struct {
@@ -46,7 +49,7 @@ type Apply struct {
 }
 
 type Quote struct {
-	val Value
+	val value.Value
 }
 
 type LetRec struct {
@@ -64,11 +67,11 @@ func NewId(name string) *Id {
 	return &Id{name}
 }
 
-func NewLiteral(val Value) *Literal {
+func NewLiteral(val value.Value) *Literal {
 	return &Literal{val}
 }
 
-func NewQuote(val Value) *Quote {
+func NewQuote(val value.Value) *Quote {
 	return &Quote{val}
 }
 
@@ -97,7 +100,7 @@ func defaultEvalPartial(e AST, env *Env, ctxt interface{}) (*partialResult, erro
 	return &partialResult{nil, nil, v}, nil
 }
 
-func defaultEval(e AST, env *Env, ctxt interface{}) (Value, error) {
+func defaultEval(e AST, env *Env, ctxt interface{}) (value.Value, error) {
 	// evaluation with tail call optimization
 	var currExp AST = e
 	currEnv := env
@@ -114,7 +117,7 @@ func defaultEval(e AST, env *Env, ctxt interface{}) (Value, error) {
 	}
 }
 
-func (e *Literal) Eval(env *Env, ctxt interface{}) (Value, error) {
+func (e *Literal) Eval(env *Env, ctxt interface{}) (value.Value, error) {
 	return e.val, nil
 }
 
@@ -126,7 +129,7 @@ func (e *Literal) Str() string {
 	return fmt.Sprintf("Literal[%s]", e.val.Str())
 }
 
-func (e *Id) Eval(env *Env, ctxt interface{}) (Value, error) {
+func (e *Id) Eval(env *Env, ctxt interface{}) (value.Value, error) {
 	return env.find(e.name)
 }
 
@@ -138,7 +141,7 @@ func (e *Id) Str() string {
 	return fmt.Sprintf("Id[%s]", e.name)
 }
 
-func (e *If) Eval(env *Env, ctxt interface{}) (Value, error) {
+func (e *If) Eval(env *Env, ctxt interface{}) (value.Value, error) {
 	return defaultEval(e, env, ctxt)
 }
 
@@ -147,7 +150,7 @@ func (e *If) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if IsTrue(c) {
+	if value.IsTrue(c) {
 		return &partialResult{e.thn, env, nil}, nil
 	} else {
 		return &partialResult{e.els, env, nil}, nil
@@ -158,7 +161,7 @@ func (e *If) Str() string {
 	return fmt.Sprintf("If[%s %s %s]", e.cnd.Str(), e.thn.Str(), e.els.Str())
 }
 
-func (e *Apply) Eval(env *Env, ctxt interface{}) (Value, error) {
+func (e *Apply) Eval(env *Env, ctxt interface{}) (value.Value, error) {
 	return defaultEval(e, env, ctxt)
 }
 
@@ -167,25 +170,32 @@ func (e *Apply) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) 
 	if err != nil {
 		return nil, err
 	}
-	args := make([]Value, len(e.args))
+	args := make([]value.Value, len(e.args))
 	for i := range args {
 		args[i], err = e.args[i].Eval(env, ctxt)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if ff, ok := f.(*VFunction); ok {
-		if len(ff.params) != len(args) {
-			return nil, fmt.Errorf("Wrong number of arguments to application to %s", ff.Str())
-		}
-		newEnv := ff.env.Layer(ff.params, args)
-		return &partialResult{ff.body, newEnv, nil}, nil
-	}
-	v, err := f.Apply(args, ctxt)
+	// // this doesn't work if the VFunction doesn't hold the AST of the body!???
+	// if ff, ok := f.(*VFunction); ok {
+	// 	if len(ff.params) != len(args) {
+	// 		return nil, fmt.Errorf("Wrong number of arguments to application to %s", ff.Str())
+	// 	}
+	// 	newEnv := ff.env.Layer(ff.params, args)
+	// 	return &partialResult{ff.body, newEnv, nil}, nil
+	// }
+	v, completed, err := f.Apply(args, ctxt)
 	if err != nil {
 		return nil, err
 	}
-	return &partialResult{nil, nil, v}, nil
+	if completed {
+		// we're done
+		return &partialResult{nil, nil, v}, nil
+	}
+	result := NewApply(NewLiteral(v), []AST{})
+	// environment returned is effectively ignored since we're going to evaluate an application immediately
+	return &partialResult{result, env, nil}, nil
 }
 
 func (e *Apply) Str() string {
@@ -196,7 +206,7 @@ func (e *Apply) Str() string {
 	return fmt.Sprintf("Apply[%s%s]", e.fn.Str(), strArgs)
 }
 
-func (e *Quote) Eval(env *Env, ctxt interface{}) (Value, error) {
+func (e *Quote) Eval(env *Env, ctxt interface{}) (value.Value, error) {
 	return e.val, nil
 }
 
@@ -208,9 +218,27 @@ func (e *Quote) Str() string {
 	return fmt.Sprintf("Quote[%s]", e.val.Str())
 }
 
-func (e *LetRec) Eval(env *Env, ctxt interface{}) (Value, error) {
+func (e *LetRec) Eval(env *Env, ctxt interface{}) (value.Value, error) {
 	return defaultEval(e, env, ctxt)
 }
+
+/*
+func processPartial (partial *partialResult) (value.Value, bool) {
+	if partial.val != nil {
+		return partial.val, true
+	}
+	f := func(args []value.Value, context interface{}) (value.Value, bool, error) {
+		// same exact env? I _think_ so
+		newPartial, err := partial.exp.evalPartial(partial.env, context)
+		if err != nil {
+			return nil, true, err
+		}
+		result, compl := processPartial(newPartial)
+		return result, compl, nil
+	}
+	return NewVFunction([]string{}, f), false
+}
+*/
 
 func (e *LetRec) evalPartial(env *Env, ctxt interface{}) (*partialResult, error) {
 	if len(e.names) != len(e.params) || len(e.names) != len(e.bodies) {
@@ -220,7 +248,10 @@ func (e *LetRec) evalPartial(env *Env, ctxt interface{}) (*partialResult, error)
 	// all names initially allocated #nil
 	newEnv := env.Layer(e.names, nil)
 	for i, name := range e.names {
-		newEnv.Update(name, &VFunction{e.params[i], e.bodies[i], newEnv})
+		newEnv.Update(name, value.NewVPrimitive("__letrec__", func(args []value.Value, context interface{}) (value.Value, error) {
+			newNewEnv := newEnv.Layer(e.params[i], args)
+			return e.bodies[i].Eval(newNewEnv, context)
+		}))      //e.bodies[i], newEnv})
 	}
 	return &partialResult{e.body, newEnv, nil}, nil
 }

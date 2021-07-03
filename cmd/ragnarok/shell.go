@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"rpucella.net/ragnarok/internal/lisp"
+	"rpucella.net/ragnarok/internal/evaluator"
+	"rpucella.net/ragnarok/internal/value"
 	"rpucella.net/ragnarok/internal/parser"
 	"rpucella.net/ragnarok/internal/reader"
 	"strings"
@@ -26,7 +27,7 @@ type Context struct {
 }
 
 func shell(eco Ecosystem) {
-	env := lisp.NewEnv(map[string]lisp.Value{}, nil, eco.modules)
+	env := evaluator.NewEnv(map[string]value.Value{}, nil, eco.modules)
 	eco.addShell("*scratch*", env)
 	context := &Context{"*scratch*", "", eco, func(str string) { fmt.Println(";;", str) }}
 	stdInReader := bufio.NewReader(os.Stdin)
@@ -70,12 +71,17 @@ func shell(eco Ecosystem) {
 		}
 		if d != nil {
 			// we have a declaration
-			if d.Type == lisp.DEF_FUNCTION {
-				env.Update(d.Name, lisp.NewVFunction(d.Params, d.Body, env))
+			if d.Type == evaluator.DEF_FUNCTION {
+				f, err := parser.MakeFunction(d.Params, d.Body).Eval(env, context)
+				if err != nil {
+					fmt.Println("EVAL ERROR -", err.Error())
+					continue
+				}
+				env.Update(d.Name, f)
 				fmt.Println(";;", d.Name)
 				continue
 			}
-			if d.Type == lisp.DEF_VALUE {
+			if d.Type == evaluator.DEF_VALUE {
 				v, err := d.Body.Eval(env, context)
 				if err != nil {
 					fmt.Println("EVAL ERROR -", err.Error())
@@ -100,7 +106,7 @@ func shell(eco Ecosystem) {
 			fmt.Println("EVAL ERROR -", err.Error())
 			continue
 		}
-		if !lisp.IsNil(v) {
+		if !value.IsNil(v) {
 			fmt.Println(v.Display())
 		}
 	}
@@ -111,12 +117,12 @@ func bail() {
 	os.Exit(0)
 }
 
-func showModules(env *lisp.Env) {
+func showModules(env *evaluator.Env) {
 	modulesFn, err := env.Lookup("shell", "modules")
 	if err != nil {
 		return
 	}
-	v, err := modulesFn.Apply([]lisp.Value{}, nil)
+	v, err := value.ApplyToCompletion(modulesFn, []value.Value{}, nil)
 	if err != nil {
 		return
 	}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"rpucella.net/ragnarok/internal/lisp"
+	"rpucella.net/ragnarok/internal/value"
 )
 
 func min(a int, b int) int {
@@ -18,6 +18,6 @@ func max(a int, b int) int {
 	return a
 }
 
-func valueIgnore(val lisp.Value, err error) lisp.Value {
+func valueIgnore(val value.Value, err error) value.Value {
 	return val
 }

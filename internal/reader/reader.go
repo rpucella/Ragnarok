@@ -3,7 +3,7 @@ package reader
 import (
 	"errors"
 	"regexp"
-	"rpucella.net/ragnarok/internal/lisp"
+	"rpucella.net/ragnarok/internal/value"
 	"strconv"
 	"strings"
 )
@@ -46,74 +46,74 @@ func readQuote(s string) (bool, string) {
 	return readChar('\'', s)
 }
 
-func readSymbol(s string) (lisp.Value, string) {
+func readSymbol(s string) (value.Value, string) {
 	//fmt.Println("Trying to read as symbol")
 	result, rest := readToken(`[^"'()#\s]+`, s)
 	if result == "" {
 		return nil, s
 	}
-	return lisp.NewVSymbol(result), rest
+	return value.NewVSymbol(result), rest
 }
 
-func readString(s string) (lisp.Value, string) {
+func readString(s string) (value.Value, string) {
 	//fmt.Println("Trying to read as symbol")
 	result, rest := readToken(`"[^\n"]+"`, s)
 	if result == "" {
 		return nil, s
 	}
-	return lisp.NewVString(result[1 : len(result)-1]), rest
+	return value.NewVString(result[1 : len(result)-1]), rest
 }
 
-func readInteger(s string) (lisp.Value, string) {
+func readInteger(s string) (value.Value, string) {
 	//fmt.Println("Trying to read as integer")
 	result, rest := readToken(`-?[0-9]+`, s)
 	if result == "" {
 		return nil, s
 	}
 	num, _ := strconv.Atoi(result)
-	return lisp.NewVInteger(num), rest
+	return value.NewVInteger(num), rest
 }
 
-func readBoolean(s string) (lisp.Value, string) {
+func readBoolean(s string) (value.Value, string) {
 	// TODO: read all characters after # and then process
 	//       or treat # as a reader macro in some way?
 	result, rest := readToken(`#(?:t|T)`, s)
 	if result != "" {
-		return lisp.NewVBoolean(true), rest
+		return value.NewVBoolean(true), rest
 	}
 	result, rest = readToken(`#(?:f|F)`, s)
 	if result != "" {
-		return lisp.NewVBoolean(false), rest
+		return value.NewVBoolean(false), rest
 	}
 	return nil, s
 }
 
-func readList(s string) (lisp.Value, string, error) {
-	var current *lisp.VCons
-	var result *lisp.VCons
+func readList(s string) (value.Value, string, error) {
+	var current *value.VCons
+	var result *value.VCons
 	expr, rest, err := Read(s)
 	for err == nil {
 		if current == nil {
-			result = lisp.NewVCons(expr, &lisp.VEmpty{})
+			result = value.NewVCons(expr, &value.VEmpty{})
 			current = result
 		} else {
-			temp := lisp.NewVCons(expr, current.GetTail())
+			temp := value.NewVCons(expr, current.GetTail())
 			current.SetTail(temp)
 			current = temp
 		}
 		expr, rest, err = Read(rest)
 	}
 	if current == nil {
-		return &lisp.VEmpty{}, rest, nil
+		return &value.VEmpty{}, rest, nil
 	}
 	return result, rest, nil
 }
 
-func Read(s string) (lisp.Value, string, error) {
+func Read(s string) (value.Value, string, error) {
 	//fmt.Println("Trying to read string", s)
 	var resultB bool
 	var rest string
-	var result lisp.Value
+	var result value.Value
 	var err error
 	result, rest = readInteger(s)
 	if result != nil {
@@ -133,16 +133,16 @@ func Read(s string) (lisp.Value, string, error) {
 	}
 	resultB, rest = readQuote(s)
 	if resultB {
-		var expr lisp.Value
+		var expr value.Value
 		expr, rest, err = Read(rest)
 		if err != nil {
 			return nil, s, err
 		}
-		return lisp.NewVCons(lisp.NewVSymbol("quote"), lisp.NewVCons(expr, &lisp.VEmpty{})), rest, nil
+		return value.NewVCons(value.NewVSymbol("quote"), value.NewVCons(expr, &value.VEmpty{})), rest, nil
 	}
 	resultB, rest = readLP(s)
 	if resultB {
-		var exprs lisp.Value
+		var exprs value.Value
 		exprs, rest, err = readList(rest)
 		if err != nil {
 			return nil, s, err

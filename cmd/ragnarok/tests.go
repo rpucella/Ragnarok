@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"rpucella.net/ragnarok/internal/lisp"
+	"rpucella.net/ragnarok/internal/evaluator"
+	"rpucella.net/ragnarok/internal/value"
 	"rpucella.net/ragnarok/internal/reader"
 )
 
@@ -18,86 +19,86 @@ func test() {
 	test_read()
 }
 
-func primitiveAdd(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
+func primitiveAdd(args []value.Value, ctxt interface{}) (value.Value, error) {
 	var result int
 	for _, val := range args {
 		result += val.GetInt()
 	}
-	return lisp.NewVInteger(result), nil
+	return value.NewVInteger(result), nil
 }
 
-func primitiveMult(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
+func primitiveMult(args []value.Value, ctxt interface{}) (value.Value, error) {
 	var result int = 1
 	for _, val := range args {
 		result *= val.GetInt()
 	}
-	return lisp.NewVInteger(result), nil
+	return value.NewVInteger(result), nil
 }
 
-func sampleEnv() *lisp.Env {
-	current := map[string]lisp.Value{
-		"a": lisp.NewVInteger(10),
-		"b": lisp.NewVInteger(20),
-		"+": lisp.NewVPrimitive("+", primitiveAdd),
-		"*": lisp.NewVPrimitive("*", primitiveMult),
-		"t": lisp.NewVBoolean(true),
-		"f": lisp.NewVBoolean(false),
+func sampleEnv() *evaluator.Env {
+	current := map[string]value.Value{
+		"a": value.NewVInteger(10),
+		"b": value.NewVInteger(20),
+		"+": value.NewVPrimitive("+", primitiveAdd),
+		"*": value.NewVPrimitive("*", primitiveMult),
+		"t": value.NewVBoolean(true),
+		"f": value.NewVBoolean(false),
 	}
-	env := lisp.NewEnv(current, nil, nil)
+	env := evaluator.NewEnv(current, nil, nil)
 	return env
 }
 
 func test_value_10() {
-	var v1 lisp.Value = lisp.NewVInteger(10)
+	var v1 value.Value = value.NewVInteger(10)
 	fmt.Println(v1.Str(), "->", v1.GetInt())
 }
 
 func test_value_plus() {
-	var v1 lisp.Value = lisp.NewVInteger(10)
-	var v2 lisp.Value = lisp.NewVInteger(20)
-	var v3 lisp.Value = lisp.NewVInteger(30)
-	var vp lisp.Value = lisp.NewVPrimitive("+", primitiveAdd)
-	var args []lisp.Value = []lisp.Value{v1, v2, v3}
-	vr, _ := vp.Apply(args, nil)
+	var v1 value.Value = value.NewVInteger(10)
+	var v2 value.Value = value.NewVInteger(20)
+	var v3 value.Value = value.NewVInteger(30)
+	var vp value.Value = value.NewVPrimitive("+", primitiveAdd)
+	var args []value.Value = []value.Value{v1, v2, v3}
+	vr, _ := value.ApplyToCompletion(vp, args, nil)
 	fmt.Println(vp.Str(), "->", vr.GetInt())
 }
 
-func evalDisplay(e lisp.AST, env *lisp.Env) string {
+func evalDisplay(e evaluator.AST, env *evaluator.Env) string {
 	v, _ := e.Eval(env, nil)
 	return v.Display()
 }
 
 func test_literal() {
-	v1 := lisp.NewVInteger(10)
-	e1 := lisp.NewLiteral(v1)
+	v1 := value.NewVInteger(10)
+	e1 := evaluator.NewLiteral(v1)
 	fmt.Println(e1.Str(), "->", evalDisplay(e1, nil))
-	v2 := lisp.NewVBoolean(true)
-	e2 := lisp.NewLiteral(v2)
+	v2 := value.NewVBoolean(true)
+	e2 := evaluator.NewLiteral(v2)
 	fmt.Println(e2.Str(), "->", evalDisplay(e2, nil))
 }
 
 func test_lookup() {
 	env := sampleEnv()
-	e1 := lisp.NewId("a")
+	e1 := evaluator.NewId("a")
 	fmt.Println(e1.Str(), "->", evalDisplay(e1, env))
-	e2 := lisp.NewId("+")
+	e2 := evaluator.NewId("+")
 	fmt.Println(e2.Str(), "->", evalDisplay(e2, env))
 }
 
 func test_apply() {
 	env := sampleEnv()
-	e1 := lisp.NewId("a")
-	e2 := lisp.NewId("b")
-	args := []lisp.AST{e1, e2}
-	e3 := lisp.NewApply(lisp.NewId("+"), args)
+	e1 := evaluator.NewId("a")
+	e2 := evaluator.NewId("b")
+	args := []evaluator.AST{e1, e2}
+	e3 := evaluator.NewApply(evaluator.NewId("+"), args)
 	fmt.Println(e3.Str(), "->", evalDisplay(e3, env))
 }
 
 func test_if() {
 	env := sampleEnv()
-	e1 := lisp.NewIf(lisp.NewId("t"), lisp.NewId("a"), lisp.NewId("b"))
+	e1 := evaluator.NewIf(evaluator.NewId("t"), evaluator.NewId("a"), evaluator.NewId("b"))
 	fmt.Println(e1.Str(), "->", evalDisplay(e1, env))
-	e2 := lisp.NewIf(lisp.NewId("f"), lisp.NewId("a"), lisp.NewId("b"))
+	e2 := evaluator.NewIf(evaluator.NewId("f"), evaluator.NewId("a"), evaluator.NewId("b"))
 	fmt.Println(e2.Str(), "->", evalDisplay(e2, env))
 }
 
@@ -117,9 +118,9 @@ func test_read() {
 }
 
 func test_lists() {
-	var v lisp.Value = &lisp.VEmpty{}
-	v = lisp.NewVCons(lisp.NewVInteger(33), v)
-	v = lisp.NewVCons(lisp.NewVInteger(66), v)
-	v = lisp.NewVCons(lisp.NewVInteger(99), v)
+	var v value.Value = &value.VEmpty{}
+	v = value.NewVCons(value.NewVInteger(33), v)
+	v = value.NewVCons(value.NewVInteger(66), v)
+	v = value.NewVCons(value.NewVInteger(99), v)
 	fmt.Println(v.Str(), "->", v.Display())
 }

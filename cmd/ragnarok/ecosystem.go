@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"rpucella.net/ragnarok/internal/lisp"
+	"rpucella.net/ragnarok/internal/value"
+	"rpucella.net/ragnarok/internal/evaluator"
 )
 
 // An ecosystem is a global set of environments associated with modules, shells, or buffers
@@ -18,16 +19,16 @@ const (
 type NamedEnv struct {
 	kind envKind
 	name string
-	env *lisp.Env
+	env *evaluator.Env
 }
 
 type Ecosystem struct {
-	modules map[string]*lisp.Env
-	shells map[string]*lisp.Env
-	buffers map[string]*lisp.Env
+	modules map[string]*evaluator.Env
+	shells map[string]*evaluator.Env
+	buffers map[string]*evaluator.Env
 }
 
-func (eco Ecosystem) get(name string) (*lisp.Env, error) {
+func (eco Ecosystem) get(name string) (*evaluator.Env, error) {
 	env, ok := eco.modules[name]
 	if ok {
 		return env, nil
@@ -44,47 +45,47 @@ func (eco Ecosystem) get(name string) (*lisp.Env, error) {
 }
 
 func NewEcosystem() Ecosystem {
-	return Ecosystem{map[string]*lisp.Env{}, map[string]*lisp.Env{}, map[string]*lisp.Env{}}
+	return Ecosystem{map[string]*evaluator.Env{}, map[string]*evaluator.Env{}, map[string]*evaluator.Env{}}
 }
 
-func (eco Ecosystem) addModule(name string, env *lisp.Env) {
+func (eco Ecosystem) addModule(name string, env *evaluator.Env) {
 	eco.modules[name] = env
 }
 
-func (eco Ecosystem) addShell(name string, env *lisp.Env) {
+func (eco Ecosystem) addShell(name string, env *evaluator.Env) {
 	eco.shells[name] = env
 }
 
-func (eco Ecosystem) addBuffer(name string, env *lisp.Env) {
+func (eco Ecosystem) addBuffer(name string, env *evaluator.Env) {
 	eco.buffers[name] = env
 }
 
 func initialize() Ecosystem {
 	eco := NewEcosystem()
 	coreBindings := corePrimitives()
-	coreBindings["true"] = lisp.NewVBoolean(true)
-	coreBindings["false"] = lisp.NewVBoolean(false)
-	coreEnv := lisp.NewEnv(coreBindings, nil, eco.modules)
+	coreBindings["true"] = value.NewVBoolean(true)
+	coreBindings["false"] = value.NewVBoolean(false)
+	coreEnv := evaluator.NewEnv(coreBindings, nil, eco.modules)
 	eco.addModule("core", coreEnv)
-	testBindings := map[string]lisp.Value{
-		"a": lisp.NewVInteger(99),
-		"square": lisp.NewVPrimitive("square", func(args []lisp.Value, ctxt interface{}) (lisp.Value, error) {
-			if len(args) != 1 || !lisp.IsNumber(args[0]) {
+	testBindings := map[string]value.Value{
+		"a": value.NewVInteger(99),
+		"square": value.NewVPrimitive("square", func(args []value.Value, ctxt interface{}) (value.Value, error) {
+			if len(args) != 1 || !value.IsNumber(args[0]) {
 				return nil, fmt.Errorf("argument to square should be int")
 			}
-			return lisp.NewVInteger(args[0].GetInt() * args[0].GetInt()), nil
+			return value.NewVInteger(args[0].GetInt() * args[0].GetInt()), nil
 		}),
 	}
-	testEnv := lisp.NewEnv(testBindings, nil, eco.modules)
+	testEnv := evaluator.NewEnv(testBindings, nil, eco.modules)
 	eco.addModule("test", testEnv)
 	shellBindings := shellPrimitives()
-	shellEnv := lisp.NewEnv(shellBindings, nil, eco.modules)
+	shellEnv := evaluator.NewEnv(shellBindings, nil, eco.modules)
 	eco.addModule("shell", shellEnv)
-	configBindings := map[string]lisp.Value{
-		"lookup-path": lisp.NewVReference(lisp.NewVCons(lisp.NewVSymbol("shell"), lisp.NewVCons(lisp.NewVSymbol("core"), &lisp.VEmpty{}))),
-		"editor":      lisp.NewVReference(lisp.NewVString("emacs")),
+	configBindings := map[string]value.Value{
+		"lookup-path": value.NewVReference(value.NewVCons(value.NewVSymbol("shell"), value.NewVCons(value.NewVSymbol("core"), &value.VEmpty{}))),
+		"editor":      value.NewVReference(value.NewVString("emacs")),
 	}
-	configEnv := lisp.NewEnv(configBindings, nil, eco.modules)
+	configEnv := evaluator.NewEnv(configBindings, nil, eco.modules)
 	eco.addModule("config", configEnv)
 	return eco
 }
