@@ -24,7 +24,7 @@ func primitiveAdd(args []value.Value, ctxt interface{}) (value.Value, error) {
 	for _, val := range args {
 		result += val.GetInt()
 	}
-	return value.NewVInteger(result), nil
+	return value.NewInteger(result), nil
 }
 
 func primitiveMult(args []value.Value, ctxt interface{}) (value.Value, error) {
@@ -32,32 +32,32 @@ func primitiveMult(args []value.Value, ctxt interface{}) (value.Value, error) {
 	for _, val := range args {
 		result *= val.GetInt()
 	}
-	return value.NewVInteger(result), nil
+	return value.NewInteger(result), nil
 }
 
 func sampleEnv() *evaluator.Env {
 	current := map[string]value.Value{
-		"a": value.NewVInteger(10),
-		"b": value.NewVInteger(20),
-		"+": value.NewVPrimitive("+", primitiveAdd),
-		"*": value.NewVPrimitive("*", primitiveMult),
-		"t": value.NewVBoolean(true),
-		"f": value.NewVBoolean(false),
+		"a": value.NewInteger(10),
+		"b": value.NewInteger(20),
+		"+": value.NewPrimitive("+", primitiveAdd),
+		"*": value.NewPrimitive("*", primitiveMult),
+		"t": value.NewBoolean(true),
+		"f": value.NewBoolean(false),
 	}
 	env := evaluator.NewEnv(current, nil, nil)
 	return env
 }
 
 func test_value_10() {
-	var v1 value.Value = value.NewVInteger(10)
+	var v1 value.Value = value.NewInteger(10)
 	fmt.Println(v1.Str(), "->", v1.GetInt())
 }
 
 func test_value_plus() {
-	var v1 value.Value = value.NewVInteger(10)
-	var v2 value.Value = value.NewVInteger(20)
-	var v3 value.Value = value.NewVInteger(30)
-	var vp value.Value = value.NewVPrimitive("+", primitiveAdd)
+	var v1 value.Value = value.NewInteger(10)
+	var v2 value.Value = value.NewInteger(20)
+	var v3 value.Value = value.NewInteger(30)
+	var vp value.Value = value.NewPrimitive("+", primitiveAdd)
 	var args []value.Value = []value.Value{v1, v2, v3}
 	vr, _ := vp.Apply(args, nil)
 	fmt.Println(vp.Str(), "->", vr.GetInt())
@@ -69,10 +69,10 @@ func evalDisplay(e evaluator.AST, env *evaluator.Env) string {
 }
 
 func test_literal() {
-	v1 := value.NewVInteger(10)
+	v1 := value.NewInteger(10)
 	e1 := evaluator.NewLiteral(v1)
 	fmt.Println(e1.Str(), "->", evalDisplay(e1, nil))
-	v2 := value.NewVBoolean(true)
+	v2 := value.NewBoolean(true)
 	e2 := evaluator.NewLiteral(v2)
 	fmt.Println(e2.Str(), "->", evalDisplay(e2, nil))
 }
@@ -118,9 +118,9 @@ func test_read() {
 }
 
 func test_lists() {
-	var v value.Value = &value.VEmpty{}
-	v = value.NewVCons(value.NewVInteger(33), v)
-	v = value.NewVCons(value.NewVInteger(66), v)
-	v = value.NewVCons(value.NewVInteger(99), v)
+	var v value.Value = value.NewEmpty()
+	v = value.NewCons(value.NewInteger(33), v)
+	v = value.NewCons(value.NewInteger(66), v)
+	v = value.NewCons(value.NewInteger(99), v)
 	fmt.Println(v.Str(), "->", v.Display())
 }

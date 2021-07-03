@@ -522,5 +522,5 @@ func makeDo(exprs []evaluator.AST) evaluator.AST {
 		}
 		return result
 	}
-	return evaluator.NewLiteral(&value.VNil{})
+	return evaluator.NewLiteral(value.NewNil())
 }

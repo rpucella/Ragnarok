@@ -27,9 +27,9 @@ func listLength(v value.Value) int {
 func listAppend(v1 value.Value, v2 value.Value) value.Value {
 	current := v1
 	var result value.Value = nil
-	var current_result *value.VCons = nil
+	var current_result *value.Cons = nil
 	for value.IsCons(current) {
-		cell := value.NewVCons(current.GetHead(), nil)
+		cell := value.NewCons(current.GetHead(), nil)
 		current = current.GetTail()
 		if current_result == nil {
 			result = cell
@@ -57,7 +57,7 @@ func allConses(vs []value.Value) bool {
 func corePrimitives() map[string]value.Value {
 	bindings := map[string]value.Value{}
 	for _, d := range CORE_PRIMITIVES {
-		bindings[d.name] = value.NewVPrimitive(d.name, mkPrimitive(d))
+		bindings[d.name] = value.NewPrimitive(d.name, mkPrimitive(d))
 	}
 	return bindings
 }
@@ -65,7 +65,7 @@ func corePrimitives() map[string]value.Value {
 func shellPrimitives() map[string]value.Value {
 	bindings := map[string]value.Value{}
 	for _, d := range SHELL_PRIMITIVES {
-		bindings[d.name] = value.NewVPrimitive(d.name, mkPrimitive(d))
+		bindings[d.name] = value.NewPrimitive(d.name, mkPrimitive(d))
 	}
 	return bindings
 }
@@ -147,7 +147,7 @@ func mkNumPredicate(pred func(int, int) bool) func(string, []value.Value, interf
 		if err := checkArgType(name, args[1], isInt); err != nil {
 			return nil, err
 		}
-		return value.NewVBoolean(pred(args[0].GetInt(), args[1].GetInt())), nil
+		return value.NewBoolean(pred(args[0].GetInt(), args[1].GetInt())), nil
 	}
 }
 
@@ -156,7 +156,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"type", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVSymbol(value.Classify(args[0])), nil
+			return value.NewSymbol(value.Classify(args[0])), nil
 		},
 	},
 
@@ -170,7 +170,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				}
 				v += arg.GetInt()
 			}
-			return value.NewVInteger(v), nil
+			return value.NewInteger(v), nil
 		},
 	},
 
@@ -184,7 +184,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				}
 				v *= arg.GetInt()
 			}
-			return value.NewVInteger(v), nil
+			return value.NewInteger(v), nil
 		},
 	},
 
@@ -202,7 +202,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			} else {
 				v = -v
 			}
-			return value.NewVInteger(v), nil
+			return value.NewInteger(v), nil
 		},
 	},
 
@@ -211,10 +211,10 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			var reference value.Value = args[0]
 			for _, v := range args[1:] {
 				if !value.IsEqual(reference, v) {
-					return value.NewVBoolean(false), nil
+					return value.NewBoolean(false), nil
 				}
 			}
-			return value.NewVBoolean(true), nil
+			return value.NewBoolean(true), nil
 		},
 	},
 
@@ -236,7 +236,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 
 	PrimitiveDesc{"not", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(!value.IsTrue(args[0])), nil
+			return value.NewBoolean(!value.IsTrue(args[0])), nil
 		},
 	},
 
@@ -250,7 +250,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				}
 				v += arg.GetString()
 			}
-			return value.NewVString(v), nil
+			return value.NewString(v), nil
 		},
 	},
 
@@ -259,7 +259,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], IsString); err != nil {
 				return nil, err
 			}
-			return value.NewVInteger(len(args[0].GetString())), nil
+			return value.NewInteger(len(args[0].GetString())), nil
 		},
 	},
 
@@ -268,7 +268,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], IsString); err != nil {
 				return nil, err
 			}
-			return value.NewVString(strings.ToLower(args[0].GetString())), nil
+			return value.NewString(strings.ToLower(args[0].GetString())), nil
 		},
 	},
 
@@ -277,7 +277,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], IsString); err != nil {
 				return nil, err
 			}
-			return value.NewVString(strings.ToUpper(args[0].GetString())), nil
+			return value.NewString(strings.ToUpper(args[0].GetString())), nil
 		},
 	},
 
@@ -302,9 +302,9 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			}
 			// or perhaps raise an exception
 			if end < start {
-				return value.NewVString(""), nil
+				return value.NewString(""), nil
 			}
-			return value.NewVString(args[0].GetString()[start:end]), nil
+			return value.NewString(args[0].GetString()[start:end]), nil
 		},
 	},
 
@@ -334,7 +334,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[1], isList); err != nil {
 				return nil, err
 			}
-			return value.NewVCons(args[0], args[1]), nil
+			return value.NewCons(args[0], args[1]), nil
 		},
 	},
 
@@ -342,7 +342,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 		"append", 0, -1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
 			if len(args) == 0 {
-				return &value.VEmpty{}, nil
+				return value.NewEmpty(), nil
 			}
 			if err := checkArgType(name, args[len(args)-1], isList); err != nil {
 				return nil, err
@@ -363,10 +363,10 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[0], isList); err != nil {
 				return nil, err
 			}
-			var result value.Value = &value.VEmpty{}
+			var result value.Value = value.NewEmpty()
 			current := args[0]
 			for value.IsCons(current) {
-				result = value.NewVCons(current.GetHead(), result)
+				result = value.NewCons(current.GetHead(), result)
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
@@ -402,9 +402,9 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 
 	PrimitiveDesc{"list", 0, -1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			var result value.Value = &value.VEmpty{}
+			var result value.Value = value.NewEmpty()
 			for i := len(args) - 1; i >= 0; i -= 1 {
-				result = value.NewVCons(args[i], result)
+				result = value.NewCons(args[i], result)
 			}
 			return result, nil
 		},
@@ -424,7 +424,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if !value.IsEmpty(current) {
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
-			return value.NewVInteger(count), nil
+			return value.NewInteger(count), nil
 		},
 	},
 
@@ -463,7 +463,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				}
 			}
 			var result value.Value = nil
-			var current_result *value.VCons = nil
+			var current_result *value.Cons = nil
 			currents := make([]value.Value, len(args)-1)
 			firsts := make([]value.Value, len(args)-1)
 			for i := range args[1:] {
@@ -477,7 +477,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				if err != nil {
 					return nil, err
 				}
-				cell := value.NewVCons(v, nil)
+				cell := value.NewCons(v, nil)
 				if current_result == nil {
 					result = cell
 				} else {
@@ -489,9 +489,9 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				}
 			}
 			if current_result == nil {
-				return &value.VEmpty{}, nil
+				return value.NewEmpty(), nil
 			}
-			current_result.SetTail(&value.VEmpty{})
+			current_result.SetTail(value.NewEmpty())
 			return result, nil
 		},
 	},
@@ -537,7 +537,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				return nil, err
 			}
 			var result value.Value = nil
-			var current_result *value.VCons = nil
+			var current_result *value.Cons = nil
 			current := args[1]
 			for value.IsCons(current) {
 				v, err := args[0].Apply([]value.Value{current.GetHead()}, ctxt)
@@ -545,7 +545,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 					return nil, err
 				}
 				if value.IsTrue(v) {
-					cell := value.NewVCons(current.GetHead(), nil)
+					cell := value.NewCons(current.GetHead(), nil)
 					if current_result == nil {
 						result = cell
 					} else {
@@ -559,9 +559,9 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				return nil, fmt.Errorf("%s - malformed list", name)
 			}
 			if current_result == nil {
-				return &value.VEmpty{}, nil
+				return value.NewEmpty(), nil
 			}
-			current_result.SetTail(&value.VEmpty{})
+			current_result.SetTail(value.NewEmpty())
 			return result, nil
 		},
 	},
@@ -574,11 +574,11 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			if err := checkArgType(name, args[1], isList); err != nil {
 				return nil, err
 			}
-			var temp value.Value = &value.VEmpty{}
+			var temp value.Value = value.NewEmpty()
 			// first reverse the list
 			current := args[1]
 			for value.IsCons(current) {
-				temp = value.NewVCons(current.GetHead(), temp)
+				temp = value.NewCons(current.GetHead(), temp)
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
@@ -629,7 +629,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 
 	PrimitiveDesc{"ref", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVReference(args[0]), nil
+			return value.NewReference(args[0]), nil
 		},
 	},
 
@@ -651,61 +651,61 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 
 	PrimitiveDesc{"empty?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsEmpty(args[0])), nil
+			return value.NewBoolean(value.IsEmpty(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"cons?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsCons(args[0])), nil
+			return value.NewBoolean(value.IsCons(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"list?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsCons(args[0]) || value.IsEmpty(args[0])), nil
+			return value.NewBoolean(value.IsCons(args[0]) || value.IsEmpty(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"number?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsNumber(args[0])), nil
+			return value.NewBoolean(value.IsNumber(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"ref?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsRef(args[0])), nil
+			return value.NewBoolean(value.IsRef(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"boolean?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsBool(args[0])), nil
+			return value.NewBoolean(value.IsBool(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"string?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsString(args[0])), nil
+			return value.NewBoolean(value.IsString(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"symbol?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsSymbol(args[0])), nil
+			return value.NewBoolean(value.IsSymbol(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"function?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsFunction(args[0])), nil
+			return value.NewBoolean(value.IsFunction(args[0])), nil
 		},
 	},
 
 	PrimitiveDesc{"nil?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsNil(args[0])), nil
+			return value.NewBoolean(value.IsNil(args[0])), nil
 		},
 	},
 
@@ -715,13 +715,13 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 			for i, v := range args {
 				content[i] = v
 			}
-			return value.NewVArray(content), nil
+			return value.NewArray(content), nil
 		},
 	},
 
 	PrimitiveDesc{"array?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsArray(args[0])), nil
+			return value.NewBoolean(value.IsArray(args[0])), nil
 		},
 	},
 
@@ -737,13 +737,13 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				}
 				content[v.GetHead().GetString()] = v.GetTail().GetHead()
 			}
-			return value.NewVDict(content), nil
+			return value.NewDict(content), nil
 		},
 	},
 
 	PrimitiveDesc{"dict?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			return value.NewVBoolean(value.IsDict(args[0])), nil
+			return value.NewBoolean(value.IsDict(args[0])), nil
 		},
 	},
 }
@@ -784,9 +784,9 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
-			var result value.Value = &value.VEmpty{}
+			var result value.Value = value.NewEmpty()
 			for m := range context.ecosystem.modules {
-				result = value.NewVCons(value.NewVSymbol(m), result)
+				result = value.NewCons(value.NewSymbol(m), result)
 			}
 			return result, nil
 		},

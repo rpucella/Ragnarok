@@ -52,7 +52,7 @@ func readSymbol(s string) (value.Value, string) {
 	if result == "" {
 		return nil, s
 	}
-	return value.NewVSymbol(result), rest
+	return value.NewSymbol(result), rest
 }
 
 func readString(s string) (value.Value, string) {
@@ -61,7 +61,7 @@ func readString(s string) (value.Value, string) {
 	if result == "" {
 		return nil, s
 	}
-	return value.NewVString(result[1 : len(result)-1]), rest
+	return value.NewString(result[1 : len(result)-1]), rest
 }
 
 func readInteger(s string) (value.Value, string) {
@@ -71,7 +71,7 @@ func readInteger(s string) (value.Value, string) {
 		return nil, s
 	}
 	num, _ := strconv.Atoi(result)
-	return value.NewVInteger(num), rest
+	return value.NewInteger(num), rest
 }
 
 func readBoolean(s string) (value.Value, string) {
@@ -79,32 +79,32 @@ func readBoolean(s string) (value.Value, string) {
 	//       or treat # as a reader macro in some way?
 	result, rest := readToken(`#(?:t|T)`, s)
 	if result != "" {
-		return value.NewVBoolean(true), rest
+		return value.NewBoolean(true), rest
 	}
 	result, rest = readToken(`#(?:f|F)`, s)
 	if result != "" {
-		return value.NewVBoolean(false), rest
+		return value.NewBoolean(false), rest
 	}
 	return nil, s
 }
 
 func readList(s string) (value.Value, string, error) {
-	var current *value.VCons
-	var result *value.VCons
+	var current *value.Cons
+	var result *value.Cons
 	expr, rest, err := Read(s)
 	for err == nil {
 		if current == nil {
-			result = value.NewVCons(expr, &value.VEmpty{})
+			result = value.NewCons(expr, value.NewEmpty())
 			current = result
 		} else {
-			temp := value.NewVCons(expr, current.GetTail())
+			temp := value.NewCons(expr, current.GetTail())
 			current.SetTail(temp)
 			current = temp
 		}
 		expr, rest, err = Read(rest)
 	}
 	if current == nil {
-		return &value.VEmpty{}, rest, nil
+		return value.NewEmpty(), rest, nil
 	}
 	return result, rest, nil
 }
@@ -138,7 +138,7 @@ func Read(s string) (value.Value, string, error) {
 		if err != nil {
 			return nil, s, err
 		}
-		return value.NewVCons(value.NewVSymbol("quote"), value.NewVCons(expr, &value.VEmpty{})), rest, nil
+		return value.NewCons(value.NewSymbol("quote"), value.NewCons(expr, value.NewEmpty())), rest, nil
 	}
 	resultB, rest = readLP(s)
 	if resultB {

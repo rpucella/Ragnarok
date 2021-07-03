@@ -76,7 +76,7 @@ func (env *Env) Layer(names []string, values []value.Value) *Env {
 		if values != nil && i < len(values) {
 			bindings[name] = values[i]
 		} else {
-			bindings[name] = &value.VNil{}
+			bindings[name] = value.NewNil()
 		}
 	}
 	return &Env{bindings: bindings, previous: env, modules: env.modules}

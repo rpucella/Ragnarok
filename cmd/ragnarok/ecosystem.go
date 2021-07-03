@@ -49,19 +49,19 @@ func (eco Ecosystem) addBuffer(name string, bindings map[string]value.Value) {
 
 func coreBindings() map[string]value.Value {
 	bindings := corePrimitives()
-	bindings["true"] = value.NewVBoolean(true)
-	bindings["false"] = value.NewVBoolean(false)
+	bindings["true"] = value.NewBoolean(true)
+	bindings["false"] = value.NewBoolean(false)
 	return bindings
 }
 
 func testBindings() map[string]value.Value {
 	bindings := map[string]value.Value{
-		"a": value.NewVInteger(99),
-		"square": value.NewVPrimitive("square", func(args []value.Value, ctxt interface{}) (value.Value, error) {
+		"a": value.NewInteger(99),
+		"square": value.NewPrimitive("square", func(args []value.Value, ctxt interface{}) (value.Value, error) {
 			if len(args) != 1 || !value.IsNumber(args[0]) {
 				return nil, fmt.Errorf("argument to square should be int")
 			}
-			return value.NewVInteger(args[0].GetInt() * args[0].GetInt()), nil
+			return value.NewInteger(args[0].GetInt() * args[0].GetInt()), nil
 		}),
 	}
 	return bindings
@@ -74,8 +74,8 @@ func shellBindings() map[string]value.Value {
 
 func configBindings() map[string]value.Value {
 	bindings := map[string]value.Value{
-		"lookup-path": value.NewVReference(value.NewVCons(value.NewVSymbol("shell"), value.NewVCons(value.NewVSymbol("core"), &value.VEmpty{}))),
-		"editor":      value.NewVReference(value.NewVString("emacs")),
+		"lookup-path": value.NewReference(value.NewCons(value.NewSymbol("shell"), value.NewCons(value.NewSymbol("core"), value.NewEmpty()))),
+		"editor":      value.NewReference(value.NewString("emacs")),
 	}
 	return bindings
 }
