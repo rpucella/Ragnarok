@@ -1,0 +1,416 @@
+package value
+
+import (
+	"testing"
+)
+
+func TestBasic(t *testing.T) {
+}
+
+const errorStr = "Incorrect output for `%s`: expected `%v` but got `%v`"
+
+func assertEqualBool(t *testing.T, f string, expected bool, output bool) {
+	if output != expected {
+		t.Errorf(errorStr, f, expected, output)
+	}
+}
+
+func assertEqualKind(t *testing.T, f string, expected Kind, output Kind) {
+	if output != expected {
+		t.Errorf(errorStr, f, expected, output)
+	}
+}
+
+func assertEqualString(t *testing.T, f string, expected string, output string) {
+	if output != expected {
+		t.Errorf(errorStr, f, expected, output)
+	}
+}
+
+func TestBooleanTrue(t *testing.T) {
+	v := NewBoolean(true)
+	assertEqualString(t, "Display()", "#true", v.Display())
+	assertEqualKind(t, "Kind()", V_BOOLEAN, v.Kind())
+	assertEqualString(t, "Classify()", "bool", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", true, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", true, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(true)", true, IsEqual(v, NewBoolean(true)))
+	assertEqualBool(t, "IsEqual(false)", false, IsEqual(v, NewBoolean(false)))
+	assertEqualBool(t, "IsEqual(42)", false, IsEqual(v, NewInteger(42)))
+}
+
+func TestBooleanFalse(t *testing.T) {
+	v := NewBoolean(false)
+	assertEqualString(t, "Display()", "#false", v.Display())
+	assertEqualKind(t, "Kind()", V_BOOLEAN, v.Kind())
+	assertEqualString(t, "Classify()", "bool", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", true, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", true, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", false, IsTrue(v))
+	assertEqualBool(t, "IsEqual(true)", false, IsEqual(v, NewBoolean(true)))
+	assertEqualBool(t, "IsEqual(false)", true, IsEqual(v, NewBoolean(false)))
+	assertEqualBool(t, "IsEqual(42)", false, IsEqual(v, NewInteger(42)))
+}
+
+func TestStringEmpty(t *testing.T) {
+	v := NewString("")
+	assertEqualString(t, "Display()", "\"\"", v.Display())
+	assertEqualKind(t, "Kind()", V_STRING, v.Kind())
+	assertEqualString(t, "Classify()", "string", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", true, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", true, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", false, IsTrue(v))
+	assertEqualBool(t, "IsEqual(\"\")", true, IsEqual(v, NewString("")))
+	assertEqualBool(t, "IsEqual(\"Alice\")", false, IsEqual(v, NewString("Alice")))
+	assertEqualBool(t, "IsEqual(42)", false, IsEqual(v, NewInteger(42)))
+}
+
+func TestStringNonEmpty(t *testing.T) {
+	v := NewString("Alice")
+	assertEqualString(t, "Display()", "\"Alice\"", v.Display())
+	assertEqualKind(t, "Kind()", V_STRING, v.Kind())
+	assertEqualString(t, "Classify()", "string", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", true, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", true, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(\"\")", false, IsEqual(v, NewString("")))
+	assertEqualBool(t, "IsEqual(\"Alice\")", true, IsEqual(v, NewString("Alice")))
+	assertEqualBool(t, "IsEqual(42)", false, IsEqual(v, NewInteger(42)))
+}
+
+func TestIntegerZero(t *testing.T) {
+	v := NewInteger(0)
+	assertEqualString(t, "Display()", "0", v.Display())
+	assertEqualKind(t, "Kind()", V_INTEGER, v.Kind())
+	assertEqualString(t, "Classify()", "int", Classify(v))
+	assertEqualBool(t, "IsNumber()", true, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", true, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", false, IsTrue(v))
+	assertEqualBool(t, "IsEqual(0)", true, IsEqual(v, NewInteger(0)))
+	assertEqualBool(t, "IsEqual(42)", false, IsEqual(v, NewInteger(42)))
+	assertEqualBool(t, "IsEqual(\"Alice\")", false, IsEqual(v, NewString("Alice")))
+}
+
+func TestIntegerNonZero(t *testing.T) {
+	v := NewInteger(42)
+	assertEqualString(t, "Display()", "42", v.Display())
+	assertEqualKind(t, "Kind()", V_INTEGER, v.Kind())
+	assertEqualString(t, "Classify()", "int", Classify(v))
+	assertEqualBool(t, "IsNumber()", true, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", true, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(0)", false, IsEqual(v, NewInteger(0)))
+	assertEqualBool(t, "IsEqual(42)", true, IsEqual(v, NewInteger(42)))
+	assertEqualBool(t, "IsEqual(\"Alice\")", false, IsEqual(v, NewString("Alice")))
+}
+
+func TestSymbol(t *testing.T) {
+	v := NewSymbol("Alice")
+	assertEqualString(t, "Display()", "Alice", v.Display())
+	assertEqualKind(t, "Kind()", V_SYMBOL, v.Kind())
+	assertEqualString(t, "Classify()", "symbol", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", true, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", true, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(Alice)", true, IsEqual(v, NewSymbol("Alice")))
+	assertEqualBool(t, "IsEqual(Bob)", false, IsEqual(v, NewSymbol("Bob")))
+	assertEqualBool(t, "IsEqual(\"Alice\")", false, IsEqual(v, NewString("Alice")))
+}
+
+func TestNil(t *testing.T) {
+	v := NewNil()
+	assertEqualString(t, "Display()", "#nil", v.Display())
+	assertEqualKind(t, "Kind()", V_NIL, v.Kind())
+	assertEqualString(t, "Classify()", "nil", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", true, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", false, IsTrue(v))
+	assertEqualBool(t, "IsEqual(nil)", true, IsEqual(v, NewNil()))
+	assertEqualBool(t, "IsEqual(0)", false, IsEqual(v, NewInteger(0)))
+	assertEqualBool(t, "IsEqual(\"\")", false, IsEqual(v, NewString("")))
+}
+
+func TestReferenceInteger(t *testing.T) {
+	v := NewReference(NewInteger(42))
+	assertEqualString(t, "Display()", "#<ref 42>", v.Display())
+	assertEqualKind(t, "Kind()", V_REFERENCE, v.Kind())
+	assertEqualString(t, "Classify()", "reference", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", true, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(v)", true, IsEqual(v, v))
+	assertEqualBool(t, "IsEqual(ref(42))", false, IsEqual(v, NewReference(NewInteger(42))))
+	assertEqualBool(t, "IsEqual(42)", false, IsEqual(v, NewInteger(42)))
+}
+
+func TestReferenceString(t *testing.T) {
+	v := NewReference(NewString("Alice"))
+	assertEqualString(t, "Display()", "#<ref \"Alice\">", v.Display())
+	assertEqualKind(t, "Kind()", V_REFERENCE, v.Kind())
+	assertEqualString(t, "Classify()", "reference", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", true, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(v)", true, IsEqual(v, v))
+	assertEqualBool(t, "IsEqual(ref(\"Alice\"))", false, IsEqual(v, NewReference(NewString("Alice"))))
+	assertEqualBool(t, "IsEqual(\"Alice\")", false, IsEqual(v, NewString("Alice")))
+}
+
+func TestReferenceNested(t *testing.T) {
+	v1 := NewReference(NewString("Alice"))
+	v := NewReference(v1)
+	assertEqualString(t, "Display()", "#<ref #<ref \"Alice\">>", v.Display())
+	assertEqualKind(t, "Kind()", V_REFERENCE, v.Kind())
+	assertEqualString(t, "Classify()", "reference", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", true, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(v)", true, IsEqual(v, v))
+	assertEqualBool(t, "IsEqual(ref(v1))", false, IsEqual(v, NewReference(v1)))
+	assertEqualBool(t, "IsEqual(ref(ref(\"Alice\")))", false, IsEqual(v, NewReference(NewReference(NewString("Alice")))))
+	assertEqualBool(t, "IsEqual(\"Alice\")", false, IsEqual(v, NewString("Alice")))
+}
+
+func TestEmpty(t *testing.T) {
+	v := NewEmpty()
+	assertEqualString(t, "Display()", "()", v.Display())
+	assertEqualKind(t, "Kind()", V_EMPTY, v.Kind())
+	assertEqualString(t, "Classify()", "list", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", true, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
+	assertEqualBool(t, "IsList()", true, IsList(v))
+	assertEqualBool(t, "IsTrue()", false, IsTrue(v))
+	assertEqualBool(t, "IsEqual(empty)", true, IsEqual(v, NewEmpty()))
+	assertEqualBool(t, "IsEqual(0)", false, IsEqual(v, NewInteger(0)))
+	assertEqualBool(t, "IsEqual(\"\")", false, IsEqual(v, NewString("")))
+}
+
+func TestCons1(t *testing.T) {
+	v := NewCons(NewInteger(42), NewEmpty())
+	assertEqualString(t, "Display()", "(42)", v.Display())
+	assertEqualKind(t, "Kind()", V_CONS, v.Kind())
+	assertEqualString(t, "Classify()", "list", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", true, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
+	assertEqualBool(t, "IsList()", true, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(empty)", false, IsEqual(v, NewEmpty()))
+	assertEqualBool(t, "IsEqual(cons(42, empty))", true, IsEqual(v, NewCons(NewInteger(42), NewEmpty())))
+	assertEqualBool(t, "IsEqual(cons(0, empty))", false, IsEqual(v, NewCons(NewInteger(0), NewEmpty())))
+	assertEqualBool(t, "IsEqual(cons(42, cons(\"Alice\", empty)))", false, IsEqual(v, NewCons(NewInteger(42), NewCons(NewString("Alice"), NewEmpty()))))
+}
+
+func TestCons2(t *testing.T) {
+	v := NewCons(NewInteger(42), NewCons(NewString("Alice"), NewEmpty()))
+	assertEqualString(t, "Display()", "(42 \"Alice\")", v.Display())
+	assertEqualKind(t, "Kind()", V_CONS, v.Kind())
+	assertEqualString(t, "Classify()", "list", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", true, IsCons(v))
+	assertEqualBool(t, "IsFunction()", false, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
+	assertEqualBool(t, "IsList()", true, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(empty)", false, IsEqual(v, NewEmpty()))
+	assertEqualBool(t, "IsEqual(cons(42, empty))", false, IsEqual(v, NewCons(NewInteger(42), NewEmpty())))
+	assertEqualBool(t, "IsEqual(cons(0, empty))", false, IsEqual(v, NewCons(NewInteger(0), NewEmpty())))
+	assertEqualBool(t, "IsEqual(cons(42, cons(\"Alice\", empty)))", true, IsEqual(v, NewCons(NewInteger(42), NewCons(NewString("Alice"), NewEmpty()))))
+}
+
+func TestPrimitive(t *testing.T) {
+	f0 := func(args []Value, ctxt interface{}) (Value, error) {
+		return args[0], nil
+	}
+	f0prime := func(args []Value, ctxt interface{}) (Value, error) {
+		return args[0], nil
+	}
+	f1 := func(args []Value, ctxt interface{}) (Value, error) {
+		return args[1], nil
+	}
+	v := NewPrimitive("f0", f0)
+	assertEqualString(t, "Display()", "#<prim f0>", v.Display())
+	assertEqualKind(t, "Kind()", V_FUNCTION, v.Kind())
+	assertEqualString(t, "Classify()", "fun", Classify(v))
+	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
+	assertEqualBool(t, "IsBoolean()", false, IsBool(v))
+	assertEqualBool(t, "IsString()", false, IsString(v))
+	assertEqualBool(t, "IsSymbol()", false, IsSymbol(v))
+	assertEqualBool(t, "IsNil()", false, IsNil(v))
+	assertEqualBool(t, "IsRef()", false, IsRef(v))
+	assertEqualBool(t, "IsEmpty()", false, IsEmpty(v))
+	assertEqualBool(t, "IsCons()", false, IsCons(v))
+	assertEqualBool(t, "IsFunction()", true, IsFunction(v))
+	assertEqualBool(t, "IsArray()", false, IsArray(v))
+	assertEqualBool(t, "IsDict()", false, IsDict(v))
+	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
+	assertEqualBool(t, "IsList()", false, IsList(v))
+	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
+	assertEqualBool(t, "IsEqual(f0)", true, IsEqual(v, NewPrimitive("f0", f0)))
+	assertEqualBool(t, "IsEqual(f0')", false, IsEqual(v, NewPrimitive("f0", f0prime)))
+	assertEqualBool(t, "IsEqual(f1)", false, IsEqual(v, NewPrimitive("f1", f1)))
+	assertEqualBool(t, "IsEqual(42)", false, IsEqual(v, NewInteger(42)))
+	vf0 := NewPrimitive("f0", f0)
+	vf1 := NewPrimitive("f1", f1)
+	v0, err := vf0.Apply([]Value{NewInteger(42), NewString("Alice")}, nil)
+	if err != nil {
+		t.Errorf("Unexpected error in vf0: `%w`", err)
+	}
+	v1, err := vf1.Apply([]Value{NewInteger(42), NewString("Alice")}, nil)
+	if err != nil {
+		t.Errorf("Unexpected error in vf1: `%w`", err)
+	}
+	assertEqualBool(t, "IsEqual(apply(f0, 42, \"Alice\"), 42)", true, IsEqual(v0, NewInteger(42)))
+	assertEqualBool(t, "IsEqual(apply(f0, 42, \"Alice\"), \"Alice\")", false, IsEqual(v0, NewString("Alice")))
+	assertEqualBool(t, "IsEqual(apply(f1, 42, \"Alice\"), \"Alice\")", true, IsEqual(v1, NewString("Alice")))
+	assertEqualBool(t, "IsEqual(apply(f1, 42, \"Alice\"), 42)", false, IsEqual(v1, NewInteger(42)))
+}

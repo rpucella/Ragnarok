@@ -101,4 +101,3 @@ func (v *Array) GetArray() []Value {
 func (v *Array) GetMap() map[string]Value {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
-

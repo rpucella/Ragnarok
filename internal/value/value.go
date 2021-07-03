@@ -61,6 +61,11 @@ func IsEmpty(v Value) bool {
 	return v.Kind() == V_EMPTY
 }
 
+func IsList(v Value) bool {
+	k := v.Kind()
+	return k == V_EMPTY || k == V_CONS
+}
+
 func IsNumber(v Value) bool {
 	return v.Kind() == V_INTEGER
 }
