@@ -25,14 +25,7 @@ func (v *Reference) GetString() string {
 }
 
 func (v *Reference) Apply(args []Value, ctxt interface{}) (Value, error) {
-	if len(args) > 1 {
-		return nil, fmt.Errorf("too many arguments %d to ref update", len(args))
-	}
-	if len(args) == 1 {
-		v.content = args[0]
-		return NewNil(), nil
-	}
-	return v.content, nil
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
 func (v *Reference) Str() string {

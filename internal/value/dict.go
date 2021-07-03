@@ -32,7 +32,12 @@ func (v *Dict) GetString() string {
 }
 
 func (v *Dict) Apply(args []Value, ctxt interface{}) (Value, error) {
-	if len(args) < 1 || !IsSymbol(args[0]) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
+}
+
+/* old code to make it possible to use application to get/set dicts
+
+        if len(args) < 1 || !IsSymbol(args[0]) {
 		return nil, fmt.Errorf("dict indexing requires a key")
 	}
 	if len(args) > 2 {
@@ -48,7 +53,7 @@ func (v *Dict) Apply(args []Value, ctxt interface{}) (Value, error) {
 		return nil, fmt.Errorf("key %s not in dict", key)
 	}
 	return result, nil
-}
+*/
 
 func (v *Dict) Str() string {
 	s := make([]string, len(v.content))

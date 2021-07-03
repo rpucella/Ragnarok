@@ -30,7 +30,12 @@ func (v *Array) GetString() string {
 }
 
 func (v *Array) Apply(args []Value, ctxt interface{}) (Value, error) {
-	if len(args) < 1 || !IsNumber(args[0]) {
+	return nil, fmt.Errorf("Value %s not applicable", v.Str())
+}
+
+/* old code to make it possible to use application to get/set arrays
+
+        if len(args) < 1 || !IsNumber(args[0]) {
 		return nil, fmt.Errorf("array indexing requires an index")
 	}
 	if len(args) > 2 {
@@ -45,7 +50,7 @@ func (v *Array) Apply(args []Value, ctxt interface{}) (Value, error) {
 		return NewNil(), nil
 	}
 	return v.content[idx], nil
-}
+*/
 
 func (v *Array) Str() string {
 	s := make([]string, len(v.content))

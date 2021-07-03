@@ -28,9 +28,10 @@ type Context struct {
 }
 
 func shell(eco Ecosystem) {
-	eco.addShell("*scratch*", map[string]value.Value{})
-	env, _ := eco.get("*scratch*")
-	context := &Context{"*scratch*", "*scratch*", "", eco, func(str string) { fmt.Println(";;", str) }}
+	name := "*1*"
+	eco.addShell(name, map[string]value.Value{})
+	env, _ := eco.get(name)
+	context := &Context{name, name, "", eco, func(str string) { fmt.Println(";;", str) }}
 	stdInReader := bufio.NewReader(os.Stdin)
 	showModules(env)
 	for {

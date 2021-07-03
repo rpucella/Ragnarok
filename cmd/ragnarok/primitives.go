@@ -86,28 +86,28 @@ func mkPrimitive(d PrimitiveDesc) func([]value.Value, interface{}) (value.Value,
 
 func checkArgType(name string, arg value.Value, pred func(value.Value) bool) error {
 	if !pred(arg) {
-		return fmt.Errorf("%s - wrong argument type %s", name, value.Classify(arg))
+		return fmt.Errorf("%s: wrong argument type %s", name, value.Classify(arg))
 	}
 	return nil
 }
 
 func checkMinArgs(name string, args []value.Value, n int) error {
 	if len(args) < n {
-		return fmt.Errorf("%s - too few arguments %d", name, len(args))
+		return fmt.Errorf("%s: too few arguments %d", name, len(args))
 	}
 	return nil
 }
 
 func checkMaxArgs(name string, args []value.Value, n int) error {
 	if len(args) > n {
-		return fmt.Errorf("%s - too many arguments %d", name, len(args))
+		return fmt.Errorf("%s: too many arguments %d", name, len(args))
 	}
 	return nil
 }
 
 func checkExactArgs(name string, args []value.Value, n int) error {
 	if len(args) != n {
-		return fmt.Errorf("%s - wrong number of arguments %d", name, len(args))
+		return fmt.Errorf("%s: wrong number of arguments %d", name, len(args))
 	}
 	return nil
 }
@@ -323,7 +323,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
-				return nil, fmt.Errorf("%s - malformed list", name)
+				return nil, fmt.Errorf("%s: malformed list", name)
 			}
 			return args[0].Apply(arguments, ctxt)
 		},
@@ -370,7 +370,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
-				return nil, fmt.Errorf("%s - malformed list", name)
+				return nil, fmt.Errorf("%s: malformed list", name)
 			}
 			return result, nil
 		},
@@ -382,7 +382,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				return nil, err
 			}
 			if value.IsEmpty(args[0]) {
-				return nil, fmt.Errorf("%s - empty list argument", name)
+				return nil, fmt.Errorf("%s: empty list argument", name)
 			}
 			return args[0].GetHead(), nil
 		},
@@ -394,7 +394,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				return nil, err
 			}
 			if value.IsEmpty(args[0]) {
-				return nil, fmt.Errorf("%s - empty list argument", name)
+				return nil, fmt.Errorf("%s: empty list argument", name)
 			}
 			return args[0].GetTail(), nil
 		},
@@ -422,7 +422,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
-				return nil, fmt.Errorf("%s - malformed list", name)
+				return nil, fmt.Errorf("%s: malformed list", name)
 			}
 			return value.NewInteger(count), nil
 		},
@@ -448,7 +448,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 					}
 				}
 			}
-			return nil, fmt.Errorf("%s - index %d out of bound", name, args[1].GetInt())
+			return nil, fmt.Errorf("%s: index %d out of bound", name, args[1].GetInt())
 		},
 	},
 
@@ -556,7 +556,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
-				return nil, fmt.Errorf("%s - malformed list", name)
+				return nil, fmt.Errorf("%s: malformed list", name)
 			}
 			if current_result == nil {
 				return value.NewEmpty(), nil
@@ -582,7 +582,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
-				return nil, fmt.Errorf("%s - malformed list", name)
+				return nil, fmt.Errorf("%s: malformed list", name)
 			}
 			// then fold it
 			result := args[2]
@@ -596,7 +596,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
-				return nil, fmt.Errorf("%s - malformed list", name)
+				return nil, fmt.Errorf("%s: malformed list", name)
 			}
 			return result, nil
 		},
@@ -621,7 +621,7 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
-				return nil, fmt.Errorf("%s - malformed list", name)
+				return nil, fmt.Errorf("%s: malformed list", name)
 			}
 			return result, nil
 		},
@@ -639,15 +639,86 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 	// (set (dict 'a) 10)
 	// like setf in CLISP
 
-	// PrimitiveDesc{"set", 2, 2,
-	// 	func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-	// 		if err := checkArgType(name, args[0], IsReference); err != nil {
-	// 			return nil, err
-	// 		}
-	// 		args[0].setValue(args[1])
-	// 		return value.NewNil(), nil
-	// 	},
-	// },
+	PrimitiveDesc{"get", 1, 2,
+		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
+			if value.IsRef(args[0]) {
+				if err := checkExactArgs(name, args, 1); err != nil {
+					return nil, err
+				}
+				return args[0].GetValue(), nil
+			}
+			if value.IsArray(args[0]) {
+				if err := checkExactArgs(name, args, 2); err != nil {
+					return nil, err
+				}
+				if err := checkArgType(name, args[1], isInt); err != nil {
+					return nil, err
+				}
+				arr := args[0].GetArray()
+				idx := args[1].GetInt()
+				if idx < 0 || idx >= len(arr) {
+					return nil, fmt.Errorf("%s: index %d out of bounds", name, idx)
+				}
+				return arr[idx], nil
+			}
+			if value.IsDict(args[0]) {
+				if err := checkExactArgs(name, args, 2); err != nil {
+					return nil, err
+				}
+				if err := checkArgType(name, args[1], IsSymbol); err != nil {
+					return nil, err
+				}
+				m := args[0].GetMap()
+				key := args[1].GetString()
+				result, ok := m[key]
+				if !ok {
+					return nil, fmt.Errorf("%s: key %s not in dictionary", name, key)
+				}
+				return result, nil
+			}
+			return nil, fmt.Errorf("%s: wrong argument type %s", name, value.Classify(args[0]))
+		},
+	},
+
+	PrimitiveDesc{"set!", 2, 3,
+		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
+			if value.IsRef(args[0]) {
+				if err := checkExactArgs(name, args, 2); err != nil {
+					return nil, err
+				}
+				args[0].SetValue(args[1])
+				return value.NewNil(), nil
+			}
+			if value.IsArray(args[0]) {
+				if err := checkExactArgs(name, args, 3); err != nil {
+					return nil, err
+				}
+				if err := checkArgType(name, args[1], isInt); err != nil {
+					return nil, err
+				}
+				arr := args[0].GetArray()
+				idx := args[1].GetInt()
+				if idx < 0 || idx >= len(arr) {
+					return nil, fmt.Errorf("%s: index %d out of bounds", name, idx)
+				}
+				arr[idx] = args[2]
+				return value.NewNil(), nil
+			}
+			if value.IsDict(args[0]) {
+				if err := checkExactArgs(name, args, 3); err != nil {
+					return nil, err
+				}
+				if err := checkArgType(name, args[1], IsSymbol); err != nil {
+					return nil, err
+				}
+				m := args[0].GetMap()
+				key := args[1].GetString()
+				m[key] = args[2]
+				return value.NewNil(), nil
+			}
+			return nil, fmt.Errorf("%s: wrong argument type %s", name, value.Classify(args[0]))
+		},
+	},
 
 	PrimitiveDesc{"empty?", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
@@ -845,14 +916,9 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 				current = current.GetTail()
 			}
 			if !value.IsEmpty(current) {
-				return nil, fmt.Errorf("%s - malformed list", name)
+				return nil, fmt.Errorf("%s: malformed list", name)
 			}
 			return args[0].Apply(arguments, ctxt)
 		},
 	},
 }
-
-// left:
-//
-// dictionaries #((a 1) (b 2))  (dict '(a 10) '(b 20) '(c 30))  vs (apply dict '((a 10) (b 20) (c 30)))?
-// arrays #[a b c]
