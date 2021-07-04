@@ -221,7 +221,7 @@ func TestNil(t *testing.T) {
 
 func TestReferenceInteger(t *testing.T) {
 	v := NewReference(NewInteger(42))
-	assertEqualString(t, "Display()", "#<ref 42>", v.Display())
+	assertEqualString(t, "Display()", "#(ref 42)", v.Display())
 	assertEqualKind(t, "Kind()", V_REFERENCE, v.Kind())
 	assertEqualString(t, "Classify()", "reference", Classify(v))
 	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
@@ -245,7 +245,7 @@ func TestReferenceInteger(t *testing.T) {
 
 func TestReferenceString(t *testing.T) {
 	v := NewReference(NewString("Alice"))
-	assertEqualString(t, "Display()", "#<ref \"Alice\">", v.Display())
+	assertEqualString(t, "Display()", "#(ref \"Alice\")", v.Display())
 	assertEqualKind(t, "Kind()", V_REFERENCE, v.Kind())
 	assertEqualString(t, "Classify()", "reference", Classify(v))
 	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
@@ -270,7 +270,7 @@ func TestReferenceString(t *testing.T) {
 func TestReferenceNested(t *testing.T) {
 	v1 := NewReference(NewString("Alice"))
 	v := NewReference(v1)
-	assertEqualString(t, "Display()", "#<ref #<ref \"Alice\">>", v.Display())
+	assertEqualString(t, "Display()", "#(ref #(ref \"Alice\"))", v.Display())
 	assertEqualKind(t, "Kind()", V_REFERENCE, v.Kind())
 	assertEqualString(t, "Classify()", "reference", Classify(v))
 	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
@@ -378,7 +378,7 @@ func TestPrimitive(t *testing.T) {
 		return args[1], nil
 	}
 	v := NewPrimitive("f0", f0)
-	assertEqualString(t, "Display()", "#<prim f0>", v.Display())
+	assertEqualString(t, "Display()", "#[prim f0]", v.Display())
 	assertEqualKind(t, "Kind()", V_FUNCTION, v.Kind())
 	assertEqualString(t, "Classify()", "fun", Classify(v))
 	assertEqualBool(t, "IsNumber()", false, IsNumber(v))
@@ -395,7 +395,8 @@ func TestPrimitive(t *testing.T) {
 	assertEqualBool(t, "IsAtom()", false, IsAtom(v))
 	assertEqualBool(t, "IsList()", false, IsList(v))
 	assertEqualBool(t, "IsTrue()", true, IsTrue(v))
-	assertEqualBool(t, "IsEqual(f0)", true, IsEqual(v, NewPrimitive("f0", f0)))
+	assertEqualBool(t, "IsEqual(f0)", true, IsEqual(v, v))
+	assertEqualBool(t, "IsEqual(new(f0))", false, IsEqual(v, NewPrimitive("f0", f0)))
 	assertEqualBool(t, "IsEqual(f0')", false, IsEqual(v, NewPrimitive("f0", f0prime)))
 	assertEqualBool(t, "IsEqual(f1)", false, IsEqual(v, NewPrimitive("f1", f1)))
 	assertEqualBool(t, "IsEqual(42)", false, IsEqual(v, NewInteger(42)))

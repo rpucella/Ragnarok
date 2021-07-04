@@ -41,7 +41,7 @@ func (v *Reference) GetTail() Value {
 }
 
 func (v *Reference) IsTrue() bool {
-	return false
+	return true
 }
 
 func (v *Reference) IsEqual(vv Value) bool {
