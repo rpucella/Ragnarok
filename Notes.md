@@ -37,9 +37,9 @@ https://talks.golang.org/2012/splash.article
 
 ## Editing source code
 
-    (source:edit <identifier>)
-    (source:dependencies <identifier>)   - what depends on this (transitive closure)
-    (source:references <identifier>)     - find all references (same as dependencies?)
+    (source::edit <identifier>)
+    (source::dependencies <identifier>)   - what depends on this (transitive closure)
+    (source::references <identifier>)     - find all references (same as dependencies?)
 
 
 ## Modules
@@ -59,11 +59,11 @@ The source is a protected part of the environment that we can't go into - we can
 
 Though we can "save" functions into the module after we've defined them, but they must bring with it everything they depend on. (Maybe)
 
-    (source:new-module 'name)       <-- create module
-    (source:delete-module 'name)    <-- drop module - complain if dangling module references?
-    (source:rename-module 'name)    <-- replicate to all module names in symbols? [won't catch clever non-hygienic macros]
+    (source::new-module 'name)       <-- create module
+    (source::delete-module 'name)    <-- drop module - complain if dangling module references?
+    (source::rename-module 'name)    <-- replicate to all module names in symbols? [won't catch clever non-hygienic macros]
     
-    (source:edit-module 'name)      <-- see the full code for the module?
+    (source::edit-module 'name)      <-- see the full code for the module?
     
 Notion of a private declaration in a module - starts with _?
 
@@ -236,7 +236,7 @@ Bookmarking app - kept where? What interface?
 
 ## Mutability
 
-(For now, in a module, everything must be immutable - can only define within in a module using source commands such as `source:new-function`
+(For now, in a module, everything must be immutable - can only define within in a module using source commands such as `source::new-function`
 and `source-new-constant`.)
 
 Items in the environment may be mutable or immutable.
@@ -285,6 +285,9 @@ Note that `chain` must be a macro:
         `(,(first (first apps)) (chain ,init ,@(rest apps)) ,@(rest (first apps)))
         init))
 
+Question: maybe chaining should add to the _last_ argument in the list, so that it can be used with the filtering/mapping functions?
+
+Generally, is the thing operated on the first argument or the last argument? Need some consistency - let's make it the first.
 
 ## Classes and objects
 
@@ -401,6 +404,26 @@ where:
 
 Cf Practical Common Lisp - https://gigamonkeys.com/book/object-reorientation-generic-functions.html
 
+Make some functions generic (i.e., can work with new types?)
+
+    (= ...)
+    (< ...)
+    (get ...)
+    (set! ...)
+
+    (append ...)
+      =  (list::append ...)
+         (string::append ...)
+	 (array::append ...)
+
+Maybe we can define a generic function as a map from type to instance? Adding a generic requires adding an element to the map?
+
+(def-generic core::append 'string string::append)
+(def-generic core::append 'list list::append)
+(def-generic core::append 'new-type (fn x ...))
+
+(def-generic X ...) creates the generic X if it doesn't exist, and adds to it if it does
+
 
 ## Loop macro from CL
 
@@ -423,4 +446,3 @@ Each REPL window has its own `*scratch*` environment, but also can access common
 A module can be associated with an environment (usually of the same name as the module, but that's not necessary?)
 
 You can also start Ragnarok in server-only mode, `ragnarok --server` with an optional `--log` to save the logs somewhere.
-
