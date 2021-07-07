@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	//"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +10,7 @@ import (
 	"rpucella.net/ragnarok/internal/reader"
 	"rpucella.net/ragnarok/internal/value"
 	"strings"
+	"github.com/peterh/liner"
 )
 
 // A context contains anything interesting to the execution
@@ -32,8 +33,10 @@ func shell(eco Ecosystem) {
 	eco.addShell(name, map[string]value.Value{})
 	env, _ := eco.get(name)
 	context := &Context{name, name, "", eco, func(str string) { fmt.Println(";;", str) }}
-	stdInReader := bufio.NewReader(os.Stdin)
+	//stdInReader := bufio.NewReader(os.Stdin)
 	showModules(env)
+	line := liner.NewLiner()
+	defer line.Close()
 	for {
 		if context.nextCurrentModule != "" {
 			current := context.currentModule
@@ -48,18 +51,29 @@ func shell(eco Ecosystem) {
 				env = new_env
 			}
 		}
-		fmt.Printf("\n%s | ", context.currentModule)
-		text, err := stdInReader.ReadString('\n')
+		// fmt.Printf("\n%s | ", context.currentModule)
+		// text, err := stdInReader.ReadString('\n')
+		// if err != nil {
+		// 	if err == io.EOF {
+		// 		fmt.Println()
+		// 		bail()
+		// 	}
+		// 	fmt.Println("IO ERROR - ", err.Error())
+		// }
+		fmt.Println()
+		text, err := line.Prompt(fmt.Sprintf("%s | ", context.currentModule))
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println()
 				bail()
 			}
 			fmt.Println("IO ERROR - ", err.Error())
+			continue
 		}
 		if strings.TrimSpace(text) == "" {
 			continue
 		}
+		line.AppendHistory(text)
 		v, _, err := reader.Read(text)
 		if err != nil {
 			fmt.Println("READ ERROR -", err.Error())
