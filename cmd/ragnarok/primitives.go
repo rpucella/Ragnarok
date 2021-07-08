@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"io/ioutil"
 )
 
 type PrimitiveDesc struct {
@@ -922,6 +923,29 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 		},
 	},
 
+	PrimitiveDesc{
+		"load", 1, 1,
+		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
+			context, ok := ctxt.(*Context)
+			if !ok {
+				return nil, fmt.Errorf("Problem understanding context")
+			}
+			if err := checkArgType(name, args[0], IsString); err != nil {
+				return nil, err
+			}
+			filename := args[0].GetString()
+			b, err := ioutil.ReadFile(filename)
+			if err != nil {
+				return nil, err
+			}
+			str := string(b)
+			if err := context.readAll(str, context); err != nil {
+				return nil, err
+			}
+			return value.NewNil(), nil
+		},
+	},
+	
 	PrimitiveDesc{
 		"timed-apply", 2, 2,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
