@@ -27,17 +27,26 @@ type Context struct {
 	ecosystem         Ecosystem
 	currentEnv        *evaluator.Env
 	report            func(string)
+	bail              func()
 }
 
 func shell(eco Ecosystem) {
 	name := "*1*"
 	eco.addShell(name, map[string]value.Value{})
 	env, _ := eco.get(name)
-	context := &Context{name, name, "", eco, env, func(str string) { fmt.Println(";;", str) }}
-	//stdInReader := bufio.NewReader(os.Stdin)
 	showModules(env)
 	line := liner.NewLiner()
 	defer line.Close()
+	report := func(str string) {
+		fmt.Println(";;", str)
+	}
+	bail := func() {
+		line.Close()
+		fmt.Println("") // tada, arrivederci, auf wiedersehen, hasta la vista, goodbye, au revoir
+		os.Exit(0)
+	}
+	context := &Context{name, name, "", eco, env, report, bail}
+	//stdInReader := bufio.NewReader(os.Stdin)
 	for {
 		if context.nextCurrentModule != "" {
 			current := context.currentModule
@@ -67,7 +76,8 @@ func shell(eco Ecosystem) {
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println()
-				bail()
+				fmt.Println("Use (quit) to bail out.")
+				continue
 			}
 			fmt.Println("IO ERROR - ", err.Error())
 			continue
@@ -128,11 +138,6 @@ func shell(eco Ecosystem) {
 			fmt.Println(v.Display())
 		}
 	}
-}
-
-func bail() {
-	fmt.Println("") // tada, arrivederci, auf wiedersehen, hasta la vista, goodbye, au revoir
-	os.Exit(0)
 }
 
 func showModules(env *evaluator.Env) {

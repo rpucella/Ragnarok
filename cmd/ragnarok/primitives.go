@@ -825,7 +825,11 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"quit", 0, 0,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			bail()
+			context, ok := ctxt.(*Context)
+			if !ok {
+				return nil, fmt.Errorf("Problem understanding context")
+			}
+			context.bail()
 			return value.NewNil(), nil
 		},
 	},
