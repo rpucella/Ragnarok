@@ -25,6 +25,7 @@ type Context struct {
 	currentModule     string
 	nextCurrentModule string // to switch modules, set nextCurrentModule != nil
 	ecosystem         Ecosystem
+	currentEnv        *evaluator.Env
 	report            func(string)
 }
 
@@ -32,7 +33,7 @@ func shell(eco Ecosystem) {
 	name := "*1*"
 	eco.addShell(name, map[string]value.Value{})
 	env, _ := eco.get(name)
-	context := &Context{name, name, "", eco, func(str string) { fmt.Println(";;", str) }}
+	context := &Context{name, name, "", eco, env, func(str string) { fmt.Println(";;", str) }}
 	//stdInReader := bufio.NewReader(os.Stdin)
 	showModules(env)
 	line := liner.NewLiner()
@@ -49,6 +50,7 @@ func shell(eco Ecosystem) {
 				fmt.Println("ERROR -", err.Error())
 			} else {
 				env = new_env
+				context.currentEnv = env
 			}
 		}
 		// fmt.Printf("\n%s | ", context.currentModule)

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"rpucella.net/ragnarok/internal/value"
+	"sort"
 	"strings"
 	"time"
 )
@@ -825,6 +826,32 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 		"quit", 0, 0,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
 			bail()
+			return value.NewNil(), nil
+		},
+	},
+
+	PrimitiveDesc{
+		"env", 0, 0,
+		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
+			context, ok := ctxt.(*Context)
+			if !ok {
+				return nil, fmt.Errorf("Problem understanding context")
+			}
+			bindings := context.currentEnv.Bindings()
+			maxWidth := 0
+			keys := make([]string, len(bindings))
+			i := 0
+			for name := range(bindings) {
+				if len(name) > maxWidth {
+					maxWidth = len(name)
+				}
+				keys[i] = name
+				i += 1
+			}
+			sort.Strings(keys)
+			for _, name := range(keys) {
+				context.report(fmt.Sprintf("%*s %s", -maxWidth - 2, name, bindings[name].Display()))
+			}
 			return value.NewNil(), nil
 		},
 	},

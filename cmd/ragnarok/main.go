@@ -18,8 +18,15 @@ const banner = `
                      "Y88P"
 `
 
+const help = `
+Use (modules) to see installed modules
+Use (go <module>) to navigate
+Use (env) to show bindings
+`
+
 func main() {
-	fmt.Println(banner)
+	fmt.Print(banner)
+	fmt.Print(help)
 	eco := NewEcosystem()
 	eco.addModule("core", coreBindings())
 	eco.addModule("test", testBindings())

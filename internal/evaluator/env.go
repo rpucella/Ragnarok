@@ -81,3 +81,17 @@ func (env *Env) Layer(names []string, values []value.Value) *Env {
 	}
 	return &Env{bindings: bindings, previous: env, modules: env.modules}
 }
+
+func (env *Env) Bindings() map[string]value.Value {
+	result := map[string]value.Value{}
+	curr := env
+	for curr != nil { 
+		for name, value := range(curr.bindings) {
+			if _, ok := result[name]; !ok {
+				result[name] = value
+			}
+		}
+		curr = curr.previous
+	}
+	return result
+}
