@@ -46,6 +46,7 @@ func shell(eco Ecosystem) {
 		os.Exit(0)
 	}
 	readAll := func(str string, context *Context) error {
+		vLines := []value.Value{}
 		// do something better
 		curr := str
 		for curr != "" {
@@ -53,8 +54,17 @@ func shell(eco Ecosystem) {
 			if err != nil {
 				return err
 			}
+			if vLine == nil {
+				// we have an incomplete term, but we're done reading
+				// so we must fail
+				return fmt.Errorf("READ ERROR - incomplete form")
+			}
+			vLines = append(vLines, vLine)
 			curr = rest
-			_, err = processInput(vLine, context.currentEnv, context)
+		}
+		// all good, so process all inputs
+		for _, vLine := range(vLines) {
+			_, err := processInput(vLine, context.currentEnv, context)
 			if err != nil {
 				return err
 			}
@@ -64,7 +74,7 @@ func shell(eco Ecosystem) {
 	context := &Context{name, name, "", eco, env, report, bail, readAll}
 	//stdInReader := bufio.NewReader(os.Stdin)
 	//showModules(env, context)
-	for {
+	REPL: for {
 		if context.nextCurrentModule != "" {
 			current := context.currentModule
 			context.currentModule = context.nextCurrentModule
@@ -88,36 +98,49 @@ func shell(eco Ecosystem) {
 		// 	}
 		// 	fmt.Println("IO ERROR - ", err.Error())
 		// }
-		fmt.Println()
-		text, err := line.Prompt(fmt.Sprintf("%s | ", context.currentModule))
+		vText, err := readInput(line, context)
 		if err != nil {
-			if err == io.EOF {
-				fmt.Println()
-				fmt.Println("Use (quit) to bail out.")
-				continue
-			}
-			fmt.Println("IO ERROR - ", err.Error())
-			continue
-		}
-		if strings.TrimSpace(text) == "" {
-			continue
-		}
-		line.AppendHistory(text)
-		vText, _, err := reader.Read(text)
-		if err != nil {
-			fmt.Println(fmt.Errorf("READ ERROR - %s", err))
-			continue
+			fmt.Println(err.Error())
+			continue REPL
 		}
 		v, err := processInput(vText, env, context)
 		if err != nil {
 			fmt.Println(err.Error())
-			continue
+			continue REPL
 		}
 		if v != nil && !value.IsNil(v) {
 			fmt.Println(v.Display())
 		}
 	}
 }
+
+func readInput(line *liner.State, context *Context) (value.Value, error) {
+	currText := ""
+	var vText value.Value = nil
+	prompt := fmt.Sprintf("%s | ", context.currentModule)
+	for vText == nil { 
+		text, err := line.Prompt(prompt)
+		if err != nil {
+			if err == io.EOF {
+				fmt.Println()
+				return nil, fmt.Errorf("Use (quit) to bail out.")
+			}
+			return nil, fmt.Errorf("IO ERROR - %s", err)
+		}
+		if strings.TrimSpace(text) == "" {
+			continue
+		}
+		line.AppendHistory(text)
+		currText = currText + " " + text
+		vText, _, err = reader.Read(currText)
+		if err != nil {
+			return nil, fmt.Errorf("READ ERROR - %s", err)
+		}
+		prompt = fmt.Sprintf("%*s | ", len(context.currentModule), " ")
+	}
+	return vText, nil
+}
+	
 
 func processInput(v value.Value, env *evaluator.Env, context *Context) (value.Value, error) {
 	// check if it's a declaration
@@ -145,7 +168,7 @@ func processInput(v value.Value, env *evaluator.Env, context *Context) (value.Va
 			fmt.Println(";;", d.Name)
 			return nil, nil
 		}
-		return nil, fmt.Errorf("DECLARE ERROR - unknow declaration type %s", d.Type)
+		return nil, fmt.Errorf("DECLARE ERROR - unknow declaration type %d", d.Type)
 	}
 	// check if it's an expression
 	e, err := parser.ParseExpr(v)

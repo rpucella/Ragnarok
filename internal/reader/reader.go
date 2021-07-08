@@ -93,6 +93,10 @@ func readList(s string) (value.Value, string, error) {
 	var result *value.Cons
 	expr, rest, err := Read(s)
 	for err == nil {
+		if expr == nil {
+			// incomplete, so abort
+			return nil, s, nil
+		}
 		if current == nil {
 			result = value.NewCons(expr, value.NewEmpty())
 			current = result
@@ -110,7 +114,8 @@ func readList(s string) (value.Value, string, error) {
 }
 
 func Read(s string) (value.Value, string, error) {
-	//fmt.Println("Trying to read string", s)
+	// returns the value read and any leftover string
+	// returns nil + the original string if the value read is incomplete
 	var resultB bool
 	var rest string
 	var result value.Value
@@ -138,6 +143,10 @@ func Read(s string) (value.Value, string, error) {
 		if err != nil {
 			return nil, s, err
 		}
+		if expr == nil {
+			// incomplete, so abort
+			return nil, s, nil
+		}
 		return value.NewCons(value.NewSymbol("quote"), value.NewCons(expr, value.NewEmpty())), rest, nil
 	}
 	resultB, rest = readLP(s)
@@ -152,7 +161,9 @@ func Read(s string) (value.Value, string, error) {
 		}
 		resultB, rest = readRP(rest)
 		if !resultB {
-			return nil, s, errors.New("missing closing parenthesis")
+			// return nil, s, errors.New("missing closing parenthesis")
+			// there's still stuff to be read!
+			return nil, s, nil
 		}
 		return exprs, rest, nil
 	}

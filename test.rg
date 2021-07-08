@@ -4,4 +4,4 @@
   (let ((s (square b)))
     (print "The square of" b "is" s)))
     
-  
+(print "hello")
