@@ -446,3 +446,52 @@ Each REPL window has its own `*scratch*` environment, but also can access common
 A module can be associated with an environment (usually of the same name as the module, but that's not necessary?)
 
 You can also start Ragnarok in server-only mode, `ragnarok --server` with an optional `--log` to save the logs somewhere.
+
+
+## Macros
+
+Parser macro: a transformation `Value -> Value` which gets reparsed when applied:
+
+    (def-macro (name . args) <value-transformer>)
+
+Reader macro: a transformation `Value -> Value` which gets applied when reading and returns an expression to re-created the value:
+
+    (def-reader (name . args) <value-transformer>)
+
+    #(<name> . <args>)   ->  (make-<name> ...)
+
+
+## Defining new types
+
+A type is a run-time value:
+
+    (def-type <name> (<fields>))
+
+Yields a new type `<name>` which corresponds to a value `#[type name (fields)]`
+
+A type has fields `fields`, `pred?`, `make`, and `get-*`, the last 3 of which are functions to check, create, and extract values from instances of the type.
+
+So we can define
+
+    (def-type pair-type (first second))
+
+    (def pair? (get pair-type 'pred?))
+    (def pair (get pair-type 'make))
+    (def pair-first (get pair-type 'get-first))
+    (def pair-second (get pair-type 'get-second))
+
+## Multiline reader
+
+Method `read` should return
+
+    (value, rest, err)
+
+where
+
+    err != nil: error reading
+    value != nil: done reading
+    value == nil: value not complete, so need to ask for more data, append it to rest, then re-read
+
+Alternative: return a specific error when NOT_COMPLETE, and re-try on that specific error?
+
+    
