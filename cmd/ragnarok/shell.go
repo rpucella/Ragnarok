@@ -55,10 +55,15 @@ func shell(eco Ecosystem) {
 				return err
 			}
 			if vLine == nil {
+				if rest == "" {
+					// we're done...
+					break
+				}
 				// we have an incomplete term, but we're done reading
 				// so we must fail
 				return fmt.Errorf("READ ERROR - incomplete form")
 			}
+			//fmt.Println("Got a form:", vLine.Display())
 			vLines = append(vLines, vLine)
 			curr = rest
 		}
@@ -131,7 +136,7 @@ func readInput(line *liner.State, context *Context) (value.Value, error) {
 			continue
 		}
 		line.AppendHistory(text)
-		currText = currText + " " + text
+		currText = currText + "\n" + text
 		vText, _, err = reader.Read(currText)
 		if err != nil {
 			return nil, fmt.Errorf("READ ERROR - %s", err)

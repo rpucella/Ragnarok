@@ -3,28 +3,63 @@ package reader
 import (
 	"errors"
 	"regexp"
+	"unicode"
+	"unicode/utf8"
 	"rpucella.net/ragnarok/internal/value"
 	"strconv"
 	"strings"
 )
 
+func trimLeftSpace(s string) string {
+	// stolen from the Go standard library (first half of TrimSpace)
+	// Fast path for ASCII: look for the first ASCII non-space byte
+	asciiSpace := [256]uint8{'\t': 1, '\n': 1, '\v': 1, '\f': 1, '\r': 1, ' ': 1}
+	start := 0
+	for ; start < len(s); start++ {
+		c := s[start]
+		if c >= utf8.RuneSelf {
+			// If we run into a non-ASCII byte, fall back to the
+			// slower unicode-aware method on the remaining bytes
+			return strings.TrimLeftFunc(s[start:], unicode.IsSpace)
+		}
+		if asciiSpace[c] == 0 {
+			break
+		}
+	}
+	return s[start:]
+}
+
+func trimLeftSpaceComment(s string) string {
+	ss := trimLeftSpace(s)
+	for len(ss) > 1 && ss[:2] == ";;" {
+		// while we got leading comments
+		// remove leading comment
+		nl := strings.Index(ss, "\n")
+		if nl < 0 {
+			// no NL, so really we have nothing - bail
+			return ""
+		}
+		// bump the content to the NL
+		ss = trimLeftSpace(ss[nl:])
+	}
+	return ss
+}	
+
 func readToken(token string, s string) (string, string) {
 	r, _ := regexp.Compile(`^` + token)
-	ss := strings.TrimSpace(s)
-	match := r.FindStringIndex(ss)
+	match := r.FindStringIndex(s)
 	if len(match) == 0 {
 		// no match
 		return "", s
 	} else {
-		//fmt.Println("Token match", ss, match)
-		return ss[:match[1]], ss[match[1]:]
+		//fmt.Println("Token match", s, match)
+		return s[:match[1]], s[match[1]:]
 	}
 }
 
 func readChar(c byte, s string) (bool, string) {
-	ss := strings.TrimSpace(s)
-	if len(ss) > 0 && ss[0] == c {
-		return true, ss[1:]
+	if len(s) > 0 && s[0] == c {
+		return true, s[1:]
 	}
 	return false, s
 }
@@ -120,6 +155,13 @@ func Read(s string) (value.Value, string, error) {
 	var rest string
 	var result value.Value
 	var err error
+	// fmt.Printf("Trying to read `%s`\n", s)
+	// remove leading spaces/comments
+	s = trimLeftSpaceComment(s)
+	if s == "" {
+		// we're done...
+		return nil, "", nil
+	}
 	result, rest = readInteger(s)
 	if result != nil {
 		return result, rest, nil
