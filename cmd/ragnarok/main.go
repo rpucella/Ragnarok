@@ -30,9 +30,8 @@ func main() {
 	fmt.Print(banner)
 	fmt.Print(help)
 	eco := ragnarok.NewEcosystem()
-	eco.AddModule("core", CoreBindings())
-	eco.AddModule("test", TestBindings())
-	eco.AddModule("shell", ShellBindings())
-	eco.AddModule("config", ConfigBindings())
+	initializeConfig(eco)
+	initializeShell(eco)
+	initializeCore(eco)
 	shell.Shell(eco)
 }

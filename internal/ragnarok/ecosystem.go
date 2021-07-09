@@ -50,3 +50,9 @@ func (eco Ecosystem) AddBuffer(name string, bindings map[string]value.Value) {
 	eco.buffers[name] = evaluator.NewEnv(bindings, nil, eco.modules)
 
 }
+
+func (eco Ecosystem) CreateModule(name string) *evaluator.Env {
+	env := evaluator.NewEnv(map[string]value.Value{}, nil, eco.modules)
+	eco.modules[name] = env
+	return env
+}
