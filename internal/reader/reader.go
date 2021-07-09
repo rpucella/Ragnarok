@@ -93,7 +93,7 @@ func readList(s string) (value.Value, string, error) {
 		// are we done?
 		resultB, rest := readRP(currRest)
 		if resultB {
-			if (current == nil) {
+			if current == nil {
 				return value.NewEmpty(), rest, nil
 			}
 			return result, rest, nil

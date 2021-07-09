@@ -85,8 +85,8 @@ func (env *Env) Layer(names []string, values []value.Value) *Env {
 func (env *Env) Bindings() map[string]value.Value {
 	result := map[string]value.Value{}
 	curr := env
-	for curr != nil { 
-		for name, value := range(curr.bindings) {
+	for curr != nil {
+		for name, value := range curr.bindings {
 			if _, ok := result[name]; !ok {
 				result[name] = value
 			}

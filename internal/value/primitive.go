@@ -6,14 +6,14 @@ import (
 
 type Primitive struct {
 	name      string
-	id 	  int
+	id        int
 	primitive func([]Value, interface{}) (Value, error)
 }
 
 var primCounter int = 0
 
 func NewPrimitive(name string, prim func([]Value, interface{}) (Value, error)) *Primitive {
-        primCounter += 1
+	primCounter += 1
 	return &Primitive{name, primCounter, prim}
 }
 
@@ -52,11 +52,11 @@ func (v *Primitive) IsTrue() bool {
 }
 
 func (v *Primitive) IsEqual(vv Value) bool {
-     vvPrim, ok := vv.(*Primitive)
-     if !ok {
-         return false
-     }
-     return v.id == vvPrim.id
+	vvPrim, ok := vv.(*Primitive)
+	if !ok {
+		return false
+	}
+	return v.id == vvPrim.id
 }
 
 func (v *Primitive) Kind() Kind {

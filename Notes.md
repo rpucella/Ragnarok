@@ -221,6 +221,7 @@ Also:
     (fn (...) ...)   for functions
     (fn args ...)    for varargs functions
 
+
 ## Configuration
 
 Module `config` with a few entries like:
@@ -231,33 +232,6 @@ Module `config` with a few entries like:
 ## First app
 
 Bookmarking app - kept where? What interface?
-
-
-
-## Mutability
-
-(For now, in a module, everything must be immutable - can only define within in a module using source commands such as `source::new-function`
-and `source-new-constant`.)
-
-Items in the environment may be mutable or immutable.
-
-A function or a constant is immutable -- can only be modified by changing the source and re-evaluating.
-
-    (def (f x) (+ x 1))
-    
-    (const pi 3.141591)
-
-Variables are mutable - they can be changed by running code.
-
-    (var x 10)
-    
-How to update: 
-
-    (set! x 10) 
-
-What happens if you re-declare something? Update if in the same environment layer, hide if in a different environment
-
-In scratch, doesn't really matter. Just update the existing definition. 
 
 
 ## Chaining
@@ -353,14 +327,6 @@ function that depending on the type of arguments appends lists or strings or vec
 
 Do we want a genuine object system?
 
-
-## Reader macros
-
-    #xyz
-    #xyz(args)
-    #primitive("name")
-    #dict((10 20) (30 40) (50 60))
-    
 
 ## Generic getters/updaters for data structures
 
@@ -480,18 +446,3 @@ So we can define
     (def pair-first (get pair-type 'get-first))
     (def pair-second (get pair-type 'get-second))
 
-## Multiline reader
-
-Method `read` should return
-
-    (value, rest, err)
-
-where
-
-    err != nil: error reading
-    value != nil: done reading
-    value == nil: value not complete, so need to ask for more data, append it to rest, then re-read
-
-Alternative: return a specific error when NOT_COMPLETE, and re-try on that specific error?
-
-    

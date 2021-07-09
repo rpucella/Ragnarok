@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"github.com/peterh/liner"
 	"io"
 	"os"
 	"rpucella.net/ragnarok/internal/evaluator"
@@ -9,7 +10,6 @@ import (
 	"rpucella.net/ragnarok/internal/reader"
 	"rpucella.net/ragnarok/internal/value"
 	"strings"
-	"github.com/peterh/liner"
 )
 
 // A context contains anything interesting to the execution
@@ -67,7 +67,7 @@ func Shell(eco Ecosystem) {
 			curr = rest
 		}
 		// all good, so process all inputs
-		for _, vLine := range(vLines) {
+		for _, vLine := range vLines {
 			_, err := processInput(vLine, context.currentEnv, context)
 			if err != nil {
 				return err
@@ -78,7 +78,8 @@ func Shell(eco Ecosystem) {
 	context := &Context{name, name, "", eco, env, report, bail, readAll}
 	//stdInReader := bufio.NewReader(os.Stdin)
 	//showModules(env, context)
-	REPL: for {
+REPL:
+	for {
 		if context.nextCurrentModule != "" {
 			current := context.currentModule
 			context.currentModule = context.nextCurrentModule
@@ -122,7 +123,7 @@ func readInput(line *liner.State, context *Context) (value.Value, error) {
 	currText := ""
 	var vText value.Value = nil
 	prompt := fmt.Sprintf("%s | ", context.currentModule)
-	for vText == nil { 
+	for vText == nil {
 		text, err := line.Prompt(prompt)
 		if err != nil {
 			if err == io.EOF {
@@ -144,7 +145,6 @@ func readInput(line *liner.State, context *Context) (value.Value, error) {
 	}
 	return vText, nil
 }
-	
 
 func processInput(v value.Value, env *evaluator.Env, context *Context) (value.Value, error) {
 	// check if it's a declaration

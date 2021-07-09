@@ -2,12 +2,12 @@ package shell
 
 import (
 	"fmt"
-	"rpucella.net/ragnarok/internal/value"
+	"io/ioutil"
 	"rpucella.net/ragnarok/internal/util"
+	"rpucella.net/ragnarok/internal/value"
 	"sort"
 	"strings"
 	"time"
-	"io/ioutil"
 )
 
 type PrimitiveDesc struct {
@@ -847,7 +847,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			maxWidth := 0
 			keys := make([]string, len(bindings))
 			i := 0
-			for name := range(bindings) {
+			for name := range bindings {
 				if len(name) > maxWidth {
 					maxWidth = len(name)
 				}
@@ -855,8 +855,8 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 				i += 1
 			}
 			sort.Strings(keys)
-			for _, name := range(keys) {
-				context.report(fmt.Sprintf("%*s %s", -maxWidth - 2, name, bindings[name].Display()))
+			for _, name := range keys {
+				context.report(fmt.Sprintf("%*s %s", -maxWidth-2, name, bindings[name].Display()))
 			}
 			return value.NewNil(), nil
 		},
@@ -946,7 +946,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			return value.NewNil(), nil
 		},
 	},
-	
+
 	PrimitiveDesc{
 		"timed-apply", 2, 2,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {

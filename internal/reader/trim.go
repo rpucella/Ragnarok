@@ -1,11 +1,11 @@
 package reader
 
 import (
+	"strings"
 	"unicode"
 	"unicode/utf8"
-	"strings"
 )
-	
+
 func trimLeftSpace(s string) string {
 	// stolen from the Go standard library (first half of TrimSpace)
 	// Fast path for ASCII: look for the first ASCII non-space byte
@@ -39,4 +39,4 @@ func trimLeftSpaceComment(s string) string {
 		ss = trimLeftSpace(ss[nl:])
 	}
 	return ss
-}	
+}
