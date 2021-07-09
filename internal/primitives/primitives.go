@@ -1,8 +1,9 @@
-package shell
+package primitives
 
 import (
 	"fmt"
 	"io/ioutil"
+	"rpucella.net/ragnarok/internal/ragnarok"
 	"rpucella.net/ragnarok/internal/util"
 	"rpucella.net/ragnarok/internal/value"
 	"sort"
@@ -57,7 +58,7 @@ func allConses(vs []value.Value) bool {
 	return true
 }
 
-func corePrimitives() map[string]value.Value {
+func CorePrimitives() map[string]value.Value {
 	bindings := map[string]value.Value{}
 	for _, d := range CORE_PRIMITIVES {
 		bindings[d.name] = value.NewPrimitive(d.name, mkPrimitive(d))
@@ -65,7 +66,7 @@ func corePrimitives() map[string]value.Value {
 	return bindings
 }
 
-func shellPrimitives() map[string]value.Value {
+func ShellPrimitives() map[string]value.Value {
 	bindings := map[string]value.Value{}
 	for _, d := range SHELL_PRIMITIVES {
 		bindings[d.name] = value.NewPrimitive(d.name, mkPrimitive(d))
@@ -827,11 +828,11 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"quit", 0, 0,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			context, ok := ctxt.(*Context)
+			context, ok := ctxt.(*ragnarok.Context)
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
-			context.bail()
+			context.Bail()
 			return value.NewNil(), nil
 		},
 	},
@@ -839,11 +840,11 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"env", 0, 0,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			context, ok := ctxt.(*Context)
+			context, ok := ctxt.(*ragnarok.Context)
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
-			bindings := context.currentEnv.Bindings()
+			bindings := context.CurrentEnv.Bindings()
 			maxWidth := 0
 			keys := make([]string, len(bindings))
 			i := 0
@@ -856,7 +857,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 			}
 			sort.Strings(keys)
 			for _, name := range keys {
-				context.report(fmt.Sprintf("%*s %s", -maxWidth-2, name, bindings[name].Display()))
+				context.Report(fmt.Sprintf("%*s %s", -maxWidth-2, name, bindings[name].Display()))
 			}
 			return value.NewNil(), nil
 		},
@@ -865,18 +866,18 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"go", 0, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			context, ok := ctxt.(*Context)
+			context, ok := ctxt.(*ragnarok.Context)
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
 			if len(args) == 0 {
-				context.nextCurrentModule = context.homeModule
+				context.NextCurrentModule = context.HomeModule
 				return value.NewNil(), nil
 			}
 			if err := checkArgType(name, args[0], IsSymbol); err != nil {
 				return nil, err
 			}
-			context.nextCurrentModule = args[0].GetString()
+			context.NextCurrentModule = args[0].GetString()
 			return value.NewNil(), nil
 		},
 	},
@@ -884,12 +885,12 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"modules", 0, 0,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			context, ok := ctxt.(*Context)
+			context, ok := ctxt.(*ragnarok.Context)
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
 			var result value.Value = value.NewEmpty()
-			for m := range context.ecosystem.modules {
+			for m := range context.Ecosystem.Modules() {
 				result = value.NewCons(value.NewSymbol(m), result)
 			}
 			return result, nil
@@ -899,16 +900,16 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"help", 0, 0,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			context, ok := ctxt.(*Context)
+			context, ok := ctxt.(*ragnarok.Context)
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
-			context.report("Some help about the system")
-			context.report("")
-			context.report("      (quit)   bail out")
-			context.report("   (modules)   see available modules")
-			context.report("  (go 'buff)   navigate to a particular buffer")
-			context.report("")
+			context.Report("Some help about the system")
+			context.Report("")
+			context.Report("      (quit)   bail out")
+			context.Report("   (modules)   see available modules")
+			context.Report("  (go 'buff)   navigate to a particular buffer")
+			context.Report("")
 			return value.NewNil(), nil
 		},
 	},
@@ -927,7 +928,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"load", 1, 1,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			context, ok := ctxt.(*Context)
+			context, ok := ctxt.(*ragnarok.Context)
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
@@ -940,7 +941,7 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 				return nil, err
 			}
 			str := string(b)
-			if err := context.readAll(str, context); err != nil {
+			if err := context.ReadAll(str, context); err != nil {
 				return nil, err
 			}
 			return value.NewNil(), nil
@@ -950,13 +951,13 @@ var SHELL_PRIMITIVES = []PrimitiveDesc{
 	PrimitiveDesc{
 		"timed-apply", 2, 2,
 		func(name string, args []value.Value, ctxt interface{}) (value.Value, error) {
-			context, ok := ctxt.(*Context)
+			context, ok := ctxt.(*ragnarok.Context)
 			if !ok {
 				return nil, fmt.Errorf("Problem understanding context")
 			}
 			timeTrack := func(start time.Time) {
 				elapsed := time.Since(start)
-				context.report(fmt.Sprintf("Time: %s", elapsed))
+				context.Report(fmt.Sprintf("Time: %s", elapsed))
 			}
 			defer timeTrack(time.Now())
 			if err := checkArgType(name, args[0], IsFunction); err != nil {

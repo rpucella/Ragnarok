@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"rpucella.net/ragnarok/internal/ragnarok"
 	"rpucella.net/ragnarok/internal/shell"
 )
 
@@ -28,10 +29,10 @@ Use (env) to show bindings
 func main() {
 	fmt.Print(banner)
 	fmt.Print(help)
-	eco := shell.NewEcosystem()
-	eco.AddModule("core", shell.CoreBindings())
-	eco.AddModule("test", shell.TestBindings())
-	eco.AddModule("shell", shell.ShellBindings())
-	eco.AddModule("config", shell.ConfigBindings())
+	eco := ragnarok.NewEcosystem()
+	eco.AddModule("core", CoreBindings())
+	eco.AddModule("test", TestBindings())
+	eco.AddModule("shell", ShellBindings())
+	eco.AddModule("config", ConfigBindings())
 	shell.Shell(eco)
 }

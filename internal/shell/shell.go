@@ -7,33 +7,21 @@ import (
 	"os"
 	"rpucella.net/ragnarok/internal/evaluator"
 	"rpucella.net/ragnarok/internal/parser"
+	"rpucella.net/ragnarok/internal/ragnarok"
 	"rpucella.net/ragnarok/internal/reader"
 	"rpucella.net/ragnarok/internal/value"
 	"strings"
 )
-
-// A context contains anything interesting to the execution
 
 // Right now, it's a global variable
 
 // maybe we want to make it available via the ecosystem (thus during evaluation of forms)
 // and passing it to primitives (so that they can use it to access, well, the context)
 
-type Context struct {
-	homeModule        string
-	currentModule     string
-	nextCurrentModule string // to switch modules, set nextCurrentModule != nil
-	ecosystem         Ecosystem
-	currentEnv        *evaluator.Env
-	report            func(string)
-	bail              func()
-	readAll           func(string, *Context) error
-}
-
-func Shell(eco Ecosystem) {
+func Shell(eco ragnarok.Ecosystem) {
 	name := "*1*"
 	eco.AddShell(name, map[string]value.Value{})
-	env, _ := eco.get(name)
+	env, _ := eco.Get(name)
 	line := liner.NewLiner()
 	defer line.Close()
 	report := func(str string) {
@@ -44,7 +32,7 @@ func Shell(eco Ecosystem) {
 		fmt.Println("") // tada, arrivederci, auf wiedersehen, hasta la vista, goodbye, au revoir
 		os.Exit(0)
 	}
-	readAll := func(str string, context *Context) error {
+	readAll := func(str string, context *ragnarok.Context) error {
 		vLines := []value.Value{}
 		// do something better
 		curr := str
@@ -68,30 +56,30 @@ func Shell(eco Ecosystem) {
 		}
 		// all good, so process all inputs
 		for _, vLine := range vLines {
-			_, err := processInput(vLine, context.currentEnv, context)
+			_, err := processInput(vLine, context.CurrentEnv, context)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
 	}
-	context := &Context{name, name, "", eco, env, report, bail, readAll}
+	context := &ragnarok.Context{name, name, "", eco, env, report, bail, readAll}
 	//stdInReader := bufio.NewReader(os.Stdin)
 	//showModules(env, context)
 REPL:
 	for {
-		if context.nextCurrentModule != "" {
-			current := context.currentModule
-			context.currentModule = context.nextCurrentModule
-			context.nextCurrentModule = ""
-			new_env, err := eco.get(context.currentModule)
+		if context.NextCurrentModule != "" {
+			current := context.CurrentModule
+			context.CurrentModule = context.NextCurrentModule
+			context.NextCurrentModule = ""
+			new_env, err := eco.Get(context.CurrentModule)
 			if err != nil {
 				// reset the module names
-				context.currentModule = current
+				context.CurrentModule = current
 				fmt.Println("ERROR -", err.Error())
 			} else {
 				env = new_env
-				context.currentEnv = env
+				context.CurrentEnv = env
 			}
 		}
 		// fmt.Printf("\n%s | ", context.currentModule)
@@ -119,10 +107,10 @@ REPL:
 	}
 }
 
-func readInput(line *liner.State, context *Context) (value.Value, error) {
+func readInput(line *liner.State, context *ragnarok.Context) (value.Value, error) {
 	currText := ""
 	var vText value.Value = nil
-	prompt := fmt.Sprintf("%s | ", context.currentModule)
+	prompt := fmt.Sprintf("%s | ", context.CurrentModule)
 	for vText == nil {
 		text, err := line.Prompt(prompt)
 		if err != nil {
@@ -141,12 +129,12 @@ func readInput(line *liner.State, context *Context) (value.Value, error) {
 		if err != nil {
 			return nil, fmt.Errorf("READ ERROR - %s", err)
 		}
-		prompt = fmt.Sprintf("%*s | ", len(context.currentModule), " ")
+		prompt = fmt.Sprintf("%*s | ", len(context.CurrentModule), " ")
 	}
 	return vText, nil
 }
 
-func processInput(v value.Value, env *evaluator.Env, context *Context) (value.Value, error) {
+func processInput(v value.Value, env *evaluator.Env, context *ragnarok.Context) (value.Value, error) {
 	// check if it's a declaration
 	d, err := parser.ParseDef(v)
 	if err != nil {
@@ -187,7 +175,7 @@ func processInput(v value.Value, env *evaluator.Env, context *Context) (value.Va
 	return v, nil
 }
 
-func showModules(env *evaluator.Env, ctxt *Context) {
+func showModules(env *evaluator.Env, ctxt *ragnarok.Context) {
 	modulesFn, err := env.Lookup("shell", "modules")
 	if err != nil {
 		fmt.Println("Problem in showModules():", err)
