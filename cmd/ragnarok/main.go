@@ -33,5 +33,6 @@ func main() {
 	initializeConfig(eco)
 	initializeShell(eco)
 	initializeCore(eco)
+	initializeString(eco)
 	shell.Shell(eco)
 }
