@@ -13,14 +13,6 @@ func NewArray(content []Value) *Array {
 	return &Array{content}
 }
 
-func (v *Array) Display() string {
-	s := make([]string, len(v.content))
-	for i, vv := range v.content {
-		s[i] = vv.Display()
-	}
-	return fmt.Sprintf("#(array %s)", strings.Join(s, " "))
-}
-
 func (v *Array) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -52,12 +44,20 @@ func (v *Array) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return v.content[idx], nil
 */
 
+func (v *Array) Display() string {
+	s := make([]string, len(v.content))
+	for i, vv := range v.content {
+		s[i] = vv.Display()
+	}
+	return fmt.Sprintf("%s", strings.Join(s, " "))
+}
+
 func (v *Array) Str() string {
 	s := make([]string, len(v.content))
 	for i, vv := range v.content {
 		s[i] = vv.Str()
 	}
-	return fmt.Sprintf("Array[%s]", strings.Join(s, " "))
+	return fmt.Sprintf("#(array %s)", strings.Join(s, " "))
 }
 
 func (v *Array) GetHead() Value {

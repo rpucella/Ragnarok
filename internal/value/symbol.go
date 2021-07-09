@@ -12,10 +12,6 @@ func NewSymbol(name string) *Symbol {
 	return &Symbol{name}
 }
 
-func (v *Symbol) Display() string {
-	return v.name
-}
-
 func (v *Symbol) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -28,8 +24,12 @@ func (v *Symbol) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
+func (v *Symbol) Display() string {
+	return v.name
+}
+
 func (v *Symbol) Str() string {
-	return fmt.Sprintf("Symbol[%s]", v.name)
+	return v.name
 }
 
 func (v *Symbol) GetHead() Value {

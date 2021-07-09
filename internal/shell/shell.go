@@ -1,7 +1,6 @@
-package main
+package shell
 
 import (
-	//"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -31,9 +30,9 @@ type Context struct {
 	readAll           func(string, *Context) error
 }
 
-func shell(eco Ecosystem) {
+func Shell(eco Ecosystem) {
 	name := "*1*"
-	eco.addShell(name, map[string]value.Value{})
+	eco.AddShell(name, map[string]value.Value{})
 	env, _ := eco.get(name)
 	line := liner.NewLiner()
 	defer line.Close()
@@ -114,7 +113,7 @@ func shell(eco Ecosystem) {
 			continue REPL
 		}
 		if v != nil && !value.IsNil(v) {
-			fmt.Println(v.Display())
+			fmt.Println(v.Str())
 		}
 	}
 }

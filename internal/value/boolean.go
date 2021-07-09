@@ -12,14 +12,6 @@ func NewBoolean(val bool) *Boolean {
 	return &Boolean{val}
 }
 
-func (v *Boolean) Display() string {
-	if v.val {
-		return "#true"
-	} else {
-		return "#false"
-	}
-}
-
 func (v *Boolean) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -32,11 +24,19 @@ func (v *Boolean) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
+func (v *Boolean) Display() string {
+	if v.val {
+		return "true"
+	} else {
+		return "false"
+	}
+}
+
 func (v *Boolean) Str() string {
 	if v.val {
-		return "Boolean[true]"
+		return "#true"
 	} else {
-		return "Boolean[false]"
+		return "#false"
 	}
 }
 

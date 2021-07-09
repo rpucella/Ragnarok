@@ -18,22 +18,6 @@ func (v *Cons) SetTail(val Value) {
 	v.tail = val
 }
 
-func (v *Cons) Display() string {
-	if IsEmpty(v.tail) {
-		return "(" + v.head.Display() + ")"
-	}
-	result := "(" + v.head.Display()
-	curr := v.tail
-	for IsCons(curr) {
-		result += " " + curr.GetHead().Display()
-		curr = curr.GetTail()
-	}
-	if !IsEmpty(curr) {
-		return result + " <?>)"
-	}
-	return result + ")"
-}
-
 func (v *Cons) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -46,8 +30,36 @@ func (v *Cons) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
+func (v *Cons) Display() string {
+	if IsEmpty(v.tail) {
+		return v.head.Display()
+	}
+	result := v.head.Display()
+	curr := v.tail
+	for IsCons(curr) {
+		result += " " + curr.GetHead().Display()
+		curr = curr.GetTail()
+	}
+	if !IsEmpty(curr) {
+		return result + " <?>"
+	}
+	return result
+}
+
 func (v *Cons) Str() string {
-	return fmt.Sprintf("Cons[%s %s]", v.head.Str(), v.tail.Str())
+	if IsEmpty(v.tail) {
+		return "(" + v.head.Str() + ")"
+	}
+	result := "(" + v.head.Str()
+	curr := v.tail
+	for IsCons(curr) {
+		result += " " + curr.GetHead().Str()
+		curr = curr.GetTail()
+	}
+	if !IsEmpty(curr) {
+		return result + " <?>)"
+	}
+	return result + ")"
 }
 
 func (v *Cons) GetHead() Value {

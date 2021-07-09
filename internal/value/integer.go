@@ -12,10 +12,6 @@ func NewInteger(val int) *Integer {
 	return &Integer{val}
 }
 
-func (v *Integer) Display() string {
-	return fmt.Sprintf("%d", v.val)
-}
-
 func (v *Integer) GetInt() int {
 	return v.val
 }
@@ -28,8 +24,12 @@ func (v *Integer) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
+func (v *Integer) Display() string {
+	return fmt.Sprintf("%d", v.val)
+}
+
 func (v *Integer) Str() string {
-	return fmt.Sprintf("Integer[%d]", v.val)
+	return fmt.Sprintf("%d", v.val)
 }
 
 func (v *Integer) GetHead() Value {

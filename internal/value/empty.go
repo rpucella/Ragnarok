@@ -13,10 +13,6 @@ func NewEmpty() *Empty {
 	return defaultEmpty
 }
 
-func (v *Empty) Display() string {
-	return "()"
-}
-
 func (v *Empty) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -29,8 +25,12 @@ func (v *Empty) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
+func (v *Empty) Display() string {
+	return ""
+}
+
 func (v *Empty) Str() string {
-	return fmt.Sprintf("Empty")
+	return fmt.Sprintf("()")
 }
 
 func (v *Empty) GetHead() Value {

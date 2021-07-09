@@ -12,10 +12,6 @@ func NewReference(content Value) *Reference {
 	return &Reference{content}
 }
 
-func (v *Reference) Display() string {
-	return fmt.Sprintf("#(ref %s)", v.content.Display())
-}
-
 func (v *Reference) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -28,8 +24,12 @@ func (v *Reference) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
+func (v *Reference) Display() string {
+	return v.content.Display()
+}
+
 func (v *Reference) Str() string {
-	return fmt.Sprintf("Reference[%s]", v.content.Str())
+	return fmt.Sprintf("#(ref %s)", v.content.Str())
 }
 
 func (v *Reference) GetHead() Value {

@@ -13,16 +13,6 @@ func NewDict(content map[string]Value) *Dict {
 	return &Dict{content}
 }
 
-func (v *Dict) Display() string {
-	s := make([]string, len(v.content))
-	i := 0
-	for k, vv := range v.content {
-		s[i] = fmt.Sprintf("(%s %s)", k, vv.Display())
-		i++
-	}
-	return fmt.Sprintf("#(dict %s)", strings.Join(s, " "))
-}
-
 func (v *Dict) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -55,14 +45,24 @@ func (v *Dict) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return result, nil
 */
 
+func (v *Dict) Display() string {
+	s := make([]string, len(v.content))
+	i := 0
+	for k, vv := range v.content {
+		s[i] = fmt.Sprintf("(%s %s)", k, vv.Display())
+		i++
+	}
+	return fmt.Sprintf("%s", strings.Join(s, " "))
+}
+
 func (v *Dict) Str() string {
 	s := make([]string, len(v.content))
 	i := 0
 	for k, vv := range v.content {
-		s[i] = fmt.Sprintf("[%s %s]", k, vv.Str())
+		s[i] = fmt.Sprintf("(%s %s)", k, vv.Str())
 		i++
 	}
-	return fmt.Sprintf("Dict[%s]", strings.Join(s, " "))
+	return fmt.Sprintf("#(dict %s)", strings.Join(s, " "))
 }
 
 func (v *Dict) GetHead() Value {

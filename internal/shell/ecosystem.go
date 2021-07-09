@@ -1,4 +1,4 @@
-package main
+package shell
 
 import (
 	"fmt"
@@ -34,27 +34,27 @@ func NewEcosystem() Ecosystem {
 	return Ecosystem{map[string]*evaluator.Env{}, map[string]*evaluator.Env{}, map[string]*evaluator.Env{}}
 }
 
-func (eco Ecosystem) addModule(name string, bindings map[string]value.Value) {
+func (eco Ecosystem) AddModule(name string, bindings map[string]value.Value) {
 	eco.modules[name] = evaluator.NewEnv(bindings, nil, eco.modules)
 }
 
-func (eco Ecosystem) addShell(name string, bindings map[string]value.Value) {
+func (eco Ecosystem) AddShell(name string, bindings map[string]value.Value) {
 	eco.shells[name] = evaluator.NewEnv(bindings, nil, eco.modules)
 }
 
-func (eco Ecosystem) addBuffer(name string, bindings map[string]value.Value) {
+func (eco Ecosystem) AddBuffer(name string, bindings map[string]value.Value) {
 	eco.buffers[name] = evaluator.NewEnv(bindings, nil, eco.modules)
 
 }
 
-func coreBindings() map[string]value.Value {
+func CoreBindings() map[string]value.Value {
 	bindings := corePrimitives()
 	bindings["true"] = value.NewBoolean(true)
 	bindings["false"] = value.NewBoolean(false)
 	return bindings
 }
 
-func testBindings() map[string]value.Value {
+func TestBindings() map[string]value.Value {
 	bindings := map[string]value.Value{
 		"a": value.NewInteger(99),
 		"square": value.NewPrimitive("square", func(args []value.Value, ctxt interface{}) (value.Value, error) {
@@ -67,12 +67,12 @@ func testBindings() map[string]value.Value {
 	return bindings
 }
 
-func shellBindings() map[string]value.Value {
+func ShellBindings() map[string]value.Value {
 	bindings := shellPrimitives()
 	return bindings
 }
 
-func configBindings() map[string]value.Value {
+func ConfigBindings() map[string]value.Value {
 	bindings := map[string]value.Value{
 		"lookup-path": value.NewReference(value.NewCons(value.NewSymbol("shell"), value.NewCons(value.NewSymbol("core"), value.NewEmpty()))),
 		"editor":      value.NewReference(value.NewString("emacs")),

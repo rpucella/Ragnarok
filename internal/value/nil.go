@@ -13,11 +13,6 @@ func NewNil() *Nil {
 	return defaultNil
 }
 
-func (v *Nil) Display() string {
-	// figure out if this is the right thing?
-	return "#nil"
-}
-
 func (v *Nil) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -30,8 +25,12 @@ func (v *Nil) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
+func (v *Nil) Display() string {
+	return ""
+}
+
 func (v *Nil) Str() string {
-	return fmt.Sprintf("Nil")
+	return fmt.Sprintf("#nil")
 }
 
 func (v *Nil) GetHead() Value {

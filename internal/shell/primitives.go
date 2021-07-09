@@ -1,8 +1,9 @@
-package main
+package shell
 
 import (
 	"fmt"
 	"rpucella.net/ragnarok/internal/value"
+	"rpucella.net/ragnarok/internal/util"
 	"sort"
 	"strings"
 	"time"
@@ -294,13 +295,13 @@ var CORE_PRIMITIVES = []PrimitiveDesc{
 				if err := checkArgType(name, args[2], isInt); err != nil {
 					return nil, err
 				}
-				end = min(args[2].GetInt(), end)
+				end = util.MinInt(args[2].GetInt(), end)
 			}
 			if len(args) > 1 {
 				if err := checkArgType(name, args[1], isInt); err != nil {
 					return nil, err
 				}
-				start = max(args[1].GetInt(), start)
+				start = util.MaxInt(args[1].GetInt(), start)
 			}
 			// or perhaps raise an exception
 			if end < start {

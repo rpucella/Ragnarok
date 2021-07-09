@@ -12,10 +12,6 @@ func NewString(val string) *String {
 	return &String{val}
 }
 
-func (v *String) Display() string {
-	return "\"" + v.val + "\""
-}
-
 func (v *String) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -28,8 +24,12 @@ func (v *String) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return nil, fmt.Errorf("Value %s not applicable", v.Str())
 }
 
+func (v *String) Display() string {
+	return v.val
+}
+
 func (v *String) Str() string {
-	return fmt.Sprintf("String[%s]", v.GetString())
+	return fmt.Sprintf("\"%s\"", v.val)
 }
 
 func (v *String) GetHead() Value {

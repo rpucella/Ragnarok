@@ -17,10 +17,6 @@ func NewPrimitive(name string, prim func([]Value, interface{}) (Value, error)) *
 	return &Primitive{name, primCounter, prim}
 }
 
-func (v *Primitive) Display() string {
-	return fmt.Sprintf("#[prim %s]", v.name)
-}
-
 func (v *Primitive) GetInt() int {
 	panic(fmt.Sprintf("unchecked access to %s", v.Str()))
 }
@@ -35,8 +31,12 @@ func (v *Primitive) Apply(args []Value, ctxt interface{}) (Value, error) {
 	return result, err
 }
 
+func (v *Primitive) Display() string {
+	return fmt.Sprintf("[prim %s]", v.name)
+}
+
 func (v *Primitive) Str() string {
-	return fmt.Sprintf("Primitive[%s]", v.name)
+	return fmt.Sprintf("#[prim %s]", v.name)
 }
 
 func (v *Primitive) GetHead() Value {

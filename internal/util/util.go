@@ -1,23 +1,23 @@
-package main
+package util
 
 import (
 	"rpucella.net/ragnarok/internal/value"
 )
 
-func min(a int, b int) int {
+func MinInt(a int, b int) int {
 	if a > b {
 		return b
 	}
 	return a
 }
 
-func max(a int, b int) int {
+func MaxInt(a int, b int) int {
 	if a < b {
 		return b
 	}
 	return a
 }
 
-func valueIgnore(val value.Value, err error) value.Value {
+func ValueIgnore(val value.Value, err error) value.Value {
 	return val
 }
