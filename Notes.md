@@ -446,3 +446,39 @@ So we can define
     (def pair-first (get pair-type 'get-first))
     (def pair-second (get pair-type 'get-second))
 
+
+## Rethink values
+
+Figure out Value/Exp structure to avoid heap allocations whenever possible:
+
+- stop using Value as an interface and use an implementation using KIND to differentiate
+  and a big switch for the operations?
+
+- stop allocating Value in the heap and put them on the stack
+  (and let escape analysis handle it?)
+
+- Do some basic profiling for determining how best to use these structures
+
+- Possibly have evaluation take a "target" value that's preallocated to store the result - then we only need to allocate values on the stack going down, and they escape only if they're used to create something larger structurally, like `(cons x y)`. 
+
+What's a value?
+
+    struct {
+      Kind ValueKind
+      IntVal int
+      StringVal string
+      Val1 Value
+      Val2 Value
+      Array []Value
+      Dict map[string]Value
+    }
+
+
+## Help
+
+help bindings (help 'module)
+
+(help) should give you a run down of the current module?
+
+
+
